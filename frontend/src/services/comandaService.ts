@@ -53,5 +53,10 @@ export const comandaService = {
   async pagamentoParcial(id: string, valor: number) {
     const { data } = await api.post(`/comandas/${id}/pagamento-parcial`, { valor });
     return data;
+  },
+
+  async recalcular(id: string) {
+    const { data } = await api.post(`/comandas/${id}/recalcular`);
+    return data;
   }
 };

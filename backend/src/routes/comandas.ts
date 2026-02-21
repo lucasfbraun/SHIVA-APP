@@ -88,7 +88,10 @@ router.post('/', async (req: Request, res: Response) => {
         observacao,
         clienteId: clienteId || null,
         status: 'ABERTA',
-        numeroComanda: proximoNumero
+        numeroComanda: proximoNumero,
+        total: 0,
+        valorPago: 0,
+        valorRestante: 0
       }
     });
     
@@ -236,8 +239,16 @@ router.post('/:id/fechar', async (req: Request, res: Response) => {
     // Verificar se há valor restante a pagar
     if (comanda.valorRestante > 0.01) { // Margem de 1 centavo para erros de arredondamento
       return res.status(400).json({ 
-        error: 'Ainda há valor pendente de pagamento', 
+        error: `Não é possível fechar a comanda. Saldo devedor: R$ ${comanda.valorRestante.toFixed(2)}. Registre os pagamentos antes de fechar.`,
         valorRestante: comanda.valorRestante 
+      });
+    }
+    
+    // Validação adicional: verificar se há itens não pagos
+    const itensNaoPagos = comanda.itens.filter(item => !item.pago);
+    if (itensNaoPagos.length > 0 && comanda.valorPago === 0) {
+      return res.status(400).json({ 
+        error: `Há ${itensNaoPagos.length} item(ns) não pago(s). Marque os itens como pagos ou adicione pagamentos antes de fechar.`
       });
     }
     
@@ -411,6 +422,50 @@ router.post('/:id/cancelar', async (req: Request, res: Response) => {
     res.json(comandaCancelada);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao cancelar comanda' });
+  }
+});
+
+// POST - Recalcular valores da comanda (útil para comandas antigas)
+router.post('/:id/recalcular', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const comanda = await prisma.comanda.findUnique({
+      where: { id },
+      include: { itens: true }
+    });
+    
+    if (!comanda) {
+      return res.status(404).json({ error: 'Comanda não encontrada' });
+    }
+    
+    // Calcular total de todos os itens
+    const total = comanda.itens.reduce((sum, item) => sum + item.subtotal, 0);
+    
+    // Calcular valor pago (soma dos itens pagos)
+    const valorPago = comanda.itens
+      .filter(item => item.pago)
+      .reduce((sum, item) => sum + item.subtotal, 0);
+    
+    // Calcular valor restante
+    const valorRestante = total - valorPago;
+    
+    const comandaAtualizada = await prisma.comanda.update({
+      where: { id },
+      data: {
+        total,
+        valorPago,
+        valorRestante
+      },
+      include: { itens: true }
+    });
+    
+    res.json({
+      message: 'Valores recalculados com sucesso',
+      comanda: comandaAtualizada
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao recalcular valores' });
   }
 });
 

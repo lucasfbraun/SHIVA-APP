@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, CheckCircle, XCircle, Package, DollarSign } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, CheckCircle, XCircle, Package, DollarSign, RefreshCw } from 'lucide-react';
 import { comandaService } from '@/services/comandaService';
 import { produtoService } from '@/services/produtoService';
 import { Comanda, Produto } from '@/types';
@@ -105,7 +105,7 @@ export default function ComandaDetalhes() {
     }
 
     if (valor > (comanda?.valorRestante || 0)) {
-      alert(`Valor excede o restante: R$ ${comanda?.valorRestante.toFixed(2)}`);
+      alert(`Valor excede o saldo devedor: R$ ${comanda?.valorRestante.toFixed(2)}`);
       return;
     }
 
@@ -116,6 +116,19 @@ export default function ComandaDetalhes() {
     } catch (error: any) {
       console.error('Erro ao registrar pagamento:', error);
       alert(error.response?.data?.error || 'Erro ao registrar pagamento');
+    }
+  };
+
+  const handleRecalcular = async () => {
+    if (!confirm('Recalcular valores da comanda? Isso irá corrigir valores incorretos.')) return;
+
+    try {
+      await comandaService.recalcular(id!);
+      loadComanda();
+      alert('Valores recalculados com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao recalcular:', error);
+      alert(error.response?.data?.error || 'Erro ao recalcular valores');
     }
   };
 
@@ -196,6 +209,18 @@ export default function ComandaDetalhes() {
 
       {/* Resumo */}
       <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-text-primary">Resumo Financeiro</h3>
+          {isAberta && (
+            <button
+              onClick={handleRecalcular}
+              className="text-sm px-3 py-1.5 rounded-lg bg-purple-primary/20 text-purple-highlight hover:bg-purple-primary/30 transition flex items-center gap-2"
+            >
+              <RefreshCw size={14} />
+              <span>Recalcular</span>
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-text-secondary text-sm">Itens</p>
@@ -216,7 +241,7 @@ export default function ComandaDetalhes() {
             </p>
           </div>
           <div>
-            <p className="text-text-secondary text-sm">Restante</p>
+            <p className="text-text-secondary text-sm">Saldo Devedor</p>
             <p className="text-2xl font-bold text-yellow-400 mt-1">
               R$ {(comanda.valorRestante || 0).toFixed(2)}
             </p>
@@ -315,9 +340,11 @@ export default function ComandaDetalhes() {
       </div>
 
       {/* Pagamento Parcial */}
-      {isAberta && comanda.valorRestante > 0 && (
+      {isAberta && (
         <div className="card">
-          <h2 className="text-lg font-semibold text-text-primary mb-4">Pagamento Parcial (Dinheiro)</h2>
+          <h2 className="text-lg font-semibold text-text-primary mb-4">
+            Adicionar Pagamento (Rachar Conta)
+          </h2>
           <div className="flex gap-3">
             <div className="flex-1">
               <input
@@ -341,7 +368,7 @@ export default function ComandaDetalhes() {
             </button>
           </div>
           <p className="text-text-secondary text-sm mt-2">
-            Exemplo: Cliente vai pagar R$ 50,00 da comanda
+            👥 Exemplo: Cliente vai pagar R$ 50,00 da comanda de R$ {comanda.total.toFixed(2)}
           </p>
         </div>
       )}
@@ -360,7 +387,7 @@ export default function ComandaDetalhes() {
             onClick={handleFecharComanda}
             disabled={!comanda.itens || comanda.itens.length === 0 || comanda.valorRestante > 0.01}
             className="btn-primary flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={comanda.valorRestante > 0.01 ? `Ainda resta R$ ${comanda.valorRestante.toFixed(2)} a pagar` : ''}
+            title={comanda.valorRestante > 0.01 ? `Saldo devedor: R$ ${comanda.valorRestante.toFixed(2)} - Pague antes de fechar!` : 'Fechar comanda e dar baixa no estoque'}
           >
             <CheckCircle size={20} />
             <span>Fechar Comanda</span>
