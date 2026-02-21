@@ -231,7 +231,7 @@ export default function Produtos() {
                   <div>
                     <p className="text-xs text-text-secondary">Estoque</p>
                     <p className="font-medium text-text-primary">
-                      {produto.estoque?.quantidade || 0}
+                      {produto.controlaEstoque !== false ? (produto.estoque?.quantidade || 0) : 'N/A'}
                     </p>
                   </div>
                   <div className="text-right">
@@ -244,20 +244,24 @@ export default function Produtos() {
 
                 {/* Ações */}
                 <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => abrirModalEntrada(produto)}
-                    className="flex-1 btn-secondary py-2 text-sm flex items-center justify-center space-x-1 hover:bg-purple-primary/10"
-                  >
-                    <PackagePlus size={16} />
-                    <span>Entrada</span>
-                  </button>
-                  <button
-                    onClick={() => abrirModalEditarEstoque(produto)}
-                    className="btn-secondary py-2 px-3 text-sm flex items-center justify-center hover:bg-purple-primary/10"
-                    title="Editar estoque manualmente"
-                  >
-                    <PenLine size={16} />
-                  </button>
+                  {produto.controlaEstoque !== false && (
+                    <>
+                      <button
+                        onClick={() => abrirModalEntrada(produto)}
+                        className="flex-1 btn-secondary py-2 text-sm flex items-center justify-center space-x-1 hover:bg-purple-primary/10"
+                      >
+                        <PackagePlus size={16} />
+                        <span>Entrada</span>
+                      </button>
+                      <button
+                        onClick={() => abrirModalEditarEstoque(produto)}
+                        className="btn-secondary py-2 px-3 text-sm flex items-center justify-center hover:bg-purple-primary/10"
+                        title="Editar estoque manualmente"
+                      >
+                        <PenLine size={16} />
+                      </button>
+                    </>
+                  )}
                   <Link
                     to={`/produtos/editar/${produto.id}`}
                     className="btn-secondary py-2 px-3 text-sm flex items-center justify-center"
@@ -375,9 +379,11 @@ export default function Produtos() {
                   autoFocus
                   required
                 />
-                <p className="text-xs text-text-secondary mt-1">
-                  Estoque atual: {(produtoSelecionado.estoque?.quantidade || 0).toFixed(2)}
-                </p>
+                {produtoSelecionado.controlaEstoque !== false && (
+                  <p className="text-xs text-text-secondary mt-1">
+                    Estoque atual: {(produtoSelecionado.estoque?.quantidade || 0).toFixed(2)}
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-3 pt-2">

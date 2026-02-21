@@ -418,7 +418,7 @@ export default function ComandaDetalhes() {
                   <option value="">Selecione um produto</option>
                   {produtos.map((produto) => (
                     <option key={produto.id} value={produto.id}>
-                      {produto.nome} - R$ {produto.precoVenda.toFixed(2)} (Estoque: {produto.estoque?.quantidade || 0})
+                      {produto.nome} - R$ {produto.precoVenda.toFixed(2)} {produto.controlaEstoque !== false && `(Estoque: ${produto.estoque?.quantidade || 0})`}
                     </option>
                   ))}
                 </select>
