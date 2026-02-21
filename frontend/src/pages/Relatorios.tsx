@@ -207,7 +207,7 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
       </div>
 
       {/* Cards com métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div key="faturamento" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-text-secondary text-sm">Faturamento Total</span>
@@ -217,6 +217,17 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
             R$ {resumo?.faturamentoTotal?.toFixed(2) || '0.00'}
           </div>
           <p className="text-text-secondary text-xs mt-2">Receita bruta</p>
+        </div>
+
+        <div key="custos" className="card shadow-lg hover:shadow-xl hover:shadow-orange-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Custo dos Produtos</span>
+            <Package className="text-orange-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-orange-500">
+            R$ {resumo?.custoTotal?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-text-secondary text-xs mt-2">Custo de aquisição</p>
         </div>
 
         <div key="despesas" className="card shadow-lg hover:shadow-xl hover:shadow-red-500/20 transition">
