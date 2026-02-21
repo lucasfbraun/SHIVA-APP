@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap } from 'lucide-react';
 import { relatorioService } from '@/services/relatorioService';
 import { despesaService } from '@/services/despesaService';
+import { GraficoFaturamentoVsDespesasVsLucro, GraficoMargensBrutaVsLiquida } from '@/components/GraficosRelatorio';
 
 export default function Relatorios() {
   const [abaSelecionada, setAbaSelecionada] = useState<'vendas' | 'despesas'>('vendas');
@@ -14,6 +15,7 @@ export default function Relatorios() {
   const [margemLucro, setMargemLucro] = useState<any>(null);
   const [topClientes, setTopClientes] = useState<any[]>([]);
   const [resumo, setResumo] = useState<any>(null);
+  const [dadosMensais, setDadosMensais] = useState<any[]>([]);
 
   // Despesas
   const [mes, setMes] = useState(new Date().getMonth() + 1);
@@ -36,12 +38,13 @@ export default function Relatorios() {
       const dataInicio = new Date();
       dataInicio.setDate(hoje.getDate() - parseInt(periodo));
 
-      const [ticketData, produtosData, margemData, clientesData, resumoData] = await Promise.all([
+      const [ticketData, produtosData, margemData, clientesData, resumoData, dadosMensaisData] = await Promise.all([
         relatorioService.getTicketMedio(dataInicio.toISOString(), hoje.toISOString()),
         relatorioService.getProdutosMaisVendidos(5, dataInicio.toISOString(), hoje.toISOString()),
         relatorioService.getMargemLucro(dataInicio.toISOString(), hoje.toISOString()),
         relatorioService.getTopClientes(10, dataInicio.toISOString(), hoje.toISOString()),
-        relatorioService.getResumo(dataInicio.toISOString(), hoje.toISOString())
+        relatorioService.getResumo(dataInicio.toISOString(), hoje.toISOString()),
+        relatorioService.getMensal(12)
       ]);
 
       // Extrair o valor de ticketMedio do objeto retornado
@@ -56,6 +59,10 @@ export default function Relatorios() {
       setTopClientes(clientes);
       // Resumo completo
       setResumo(resumoData);
+      // Dados mensais
+      console.log('Dados mensais recebidos:', dadosMensaisData);
+      const meses = Array.isArray(dadosMensaisData) ? dadosMensaisData : [];
+      setDadosMensais(meses);
     } catch (error) {
       console.error('Erro ao carregar relatórios:', error);
       setTicketMedio(0);
@@ -63,6 +70,7 @@ export default function Relatorios() {
       setMargemLucro(0);
       setTopClientes([]);
       setResumo(null);
+      setDadosMensais([]);
     } finally {
       setLoading(false);
     }
@@ -163,7 +171,7 @@ export default function Relatorios() {
 }
 
 // Componente de Relatório de Vendas
-function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topClientes, margemLucro, resumo }: any) {
+function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topClientes, margemLucro, resumo, dadosMensais }: any) {
   return (
     <div className="space-y-6">
       {/* Período Selection */}
@@ -251,6 +259,12 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
           </div>
           <p className="text-text-secondary text-xs mt-2">Sobre vendas (com despesas)</p>
         </div>
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <GraficoFaturamentoVsDespesasVsLucro dados={dadosMensais} />
+        <GraficoMargensBrutaVsLiquida dados={dadosMensais} />
       </div>
 
       {/* Top Clientes */}

@@ -58,6 +58,14 @@ export const relatorioService = {
     return data;
   },
 
+  async getMensal(meses: number = 12) {
+    const params = new URLSearchParams();
+    params.append('meses', String(meses));
+    
+    const { data } = await api.get(`/relatorios/mensal?${params}`);
+    return data;
+  },
+
   async getTopClientes(limite = 10, dataInicio?: string, dataFim?: string) {
     const params = new URLSearchParams();
     params.append('limite', String(limite));
