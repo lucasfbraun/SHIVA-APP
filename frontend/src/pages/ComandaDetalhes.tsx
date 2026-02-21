@@ -104,8 +104,10 @@ export default function ComandaDetalhes() {
       return;
     }
 
-    if (valor > (comanda?.valorRestante || 0)) {
-      alert(`Valor excede o saldo devedor: R$ ${comanda?.valorRestante.toFixed(2)}`);
+    const saldoAtual = Math.abs(comanda?.valorRestante || 0) < 0.01 ? 0 : (comanda?.valorRestante || 0);
+    
+    if (valor > saldoAtual + 0.01) {
+      alert(`Valor excede o saldo devedor: R$ ${saldoAtual.toFixed(2)}`);
       return;
     }
 
@@ -177,6 +179,7 @@ export default function ComandaDetalhes() {
   }
 
   const isAberta = comanda.status === 'ABERTA';
+  const saldoDevedor = Math.abs(comanda.valorRestante || 0) < 0.01 ? 0 : comanda.valorRestante;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -243,7 +246,7 @@ export default function ComandaDetalhes() {
           <div>
             <p className="text-text-secondary text-sm">Saldo Devedor</p>
             <p className="text-2xl font-bold text-yellow-400 mt-1">
-              R$ {(comanda.valorRestante || 0).toFixed(2)}
+              R$ {(Math.abs(comanda.valorRestante || 0) < 0.01 ? 0 : comanda.valorRestante).toFixed(2)}
             </p>
           </div>
         </div>
@@ -385,9 +388,9 @@ export default function ComandaDetalhes() {
           </button>
           <button
             onClick={handleFecharComanda}
-            disabled={!comanda.itens || comanda.itens.length === 0 || comanda.valorRestante > 0.01}
+            disabled={!comanda.itens || comanda.itens.length === 0 || saldoDevedor > 0}
             className="btn-primary flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={comanda.valorRestante > 0.01 ? `Saldo devedor: R$ ${comanda.valorRestante.toFixed(2)} - Pague antes de fechar!` : 'Fechar comanda e dar baixa no estoque'}
+            title={saldoDevedor > 0 ? `Saldo devedor: R$ ${saldoDevedor.toFixed(2)} - Pague antes de fechar!` : 'Fechar comanda e dar baixa no estoque'}
           >
             <CheckCircle size={20} />
             <span>Fechar Comanda</span>

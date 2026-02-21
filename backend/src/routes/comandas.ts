@@ -3,6 +3,11 @@ import prisma from '../lib/prisma';
 
 const router = Router();
 
+// Helper para arredondar valores monetários (evita erros de arredondamento)
+const arredondar = (valor: number): number => {
+  return Math.round(valor * 100) / 100;
+};
+
 // GET - Listar comandas
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -141,7 +146,7 @@ router.post('/:id/itens', async (req: Request, res: Response) => {
       console.warn(`Aviso: Estoque insuficiente para ${produto.nome}. Disponível: ${estoqueDisponivel}, Solicitado: ${qtd}`);
     }
     
-    const subtotal = produto.precoVenda * qtd;
+    const subtotal = arredondar(produto.precoVenda * qtd);
     
     // Adicionar item e atualizar total
     const resultado = await prisma.$transaction(async (tx) => {
@@ -156,12 +161,13 @@ router.post('/:id/itens', async (req: Request, res: Response) => {
         }
       });
       
-      // Atualizar total da comanda
+      // Buscar comanda atual e atualizar com valores arredondados
+      const comandaAtual = await tx.comanda.findUnique({ where: { id } });
       await tx.comanda.update({
         where: { id },
         data: {
-          total: { increment: subtotal },
-          valorRestante: { increment: subtotal }
+          total: arredondar((comandaAtual?.total || 0) + subtotal),
+          valorRestante: arredondar((comandaAtual?.valorRestante || 0) + subtotal)
         }
       });
       
@@ -199,11 +205,12 @@ router.delete('/:id/itens/:itemId', async (req: Request, res: Response) => {
     // Remover e atualizar total
     await prisma.$transaction(async (tx) => {
       await tx.itemComanda.delete({ where: { id: itemId } });
+      const comandaAtual = await tx.comanda.findUnique({ where: { id } });
       await tx.comanda.update({
         where: { id },
         data: {
-          total: { decrement: item.subtotal },
-          valorRestante: { decrement: item.subtotal }
+          total: arredondar((comandaAtual?.total || 0) - item.subtotal),
+          valorRestante: arredondar((comandaAtual?.valorRestante || 0) - item.subtotal)
         }
       });
     });
@@ -236,8 +243,10 @@ router.post('/:id/fechar', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Comanda vazia não pode ser fechada' });
     }
     
-    // Verificar se há valor restante a pagar
-    if (comanda.valorRestante > 0.01) { // Margem de 1 centavo para erros de arredondamento
+    // Verificar se há valor restante a pagar (considera valores < 0.01 como zero)
+    const saldoDevedor = Math.abs(comanda.valorRestante) < 0.01 ? 0 : comanda.valorRestante;
+    
+    if (saldoDevedor > 0) {
       return res.status(400).json({ 
         error: `Não é possível fechar a comanda. Saldo devedor: R$ ${comanda.valorRestante.toFixed(2)}. Registre os pagamentos antes de fechar.`,
         valorRestante: comanda.valorRestante 
@@ -315,7 +324,7 @@ router.post('/:id/pagar-itens', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Nenhum item válido para marcar como pago' });
     }
     
-    const valorPagar = itensPagar.reduce((sum, item) => sum + item.subtotal, 0);
+    const valorPagar = arredondar(itensPagar.reduce((sum, item) => sum + item.subtotal, 0));
     
     // Marcar itens como pagos e atualizar comanda
     const resultado = await prisma.$transaction(async (tx) => {
@@ -325,12 +334,13 @@ router.post('/:id/pagar-itens', async (req: Request, res: Response) => {
         data: { pago: true }
       });
       
-      // Atualizar comanda
+      // Buscar comanda atual e atualizar com valores arredondados
+      const comandaAtual = await tx.comanda.findUnique({ where: { id } });
       const comandaAtualizada = await tx.comanda.update({
         where: { id },
         data: {
-          valorPago: { increment: valorPagar },
-          valorRestante: { decrement: valorPagar }
+          valorPago: arredondar((comandaAtual?.valorPago || 0) + valorPagar),
+          valorRestante: arredondar((comandaAtual?.valorRestante || 0) - valorPagar)
         },
         include: { itens: true }
       });
@@ -358,7 +368,7 @@ router.post('/:id/pagamento-parcial', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Valor do pagamento deve ser maior que zero' });
     }
     
-    const valorPagamento = parseFloat(valor);
+    const valorPagamento = arredondar(parseFloat(valor));
     
     const comanda = await prisma.comanda.findUnique({ where: { id } });
     
@@ -370,18 +380,25 @@ router.post('/:id/pagamento-parcial', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Comanda não está aberta' });
     }
     
-    if (valorPagamento > comanda.valorRestante) {
+    if (valorPagamento > comanda.valorRestante + 0.01) { // Margem para arredondamento
       return res.status(400).json({ 
         error: 'Valor do pagamento excede o valor restante',
         valorRestante: comanda.valorRestante
       });
     }
     
+    // Calcular novos valores com arredondamento
+    const novoValorPago = arredondar((comanda.valorPago || 0) + valorPagamento);
+    const novoValorRestante = arredondar(comanda.total - novoValorPago);
+    
+    // Se o valor restante ficar muito próximo de zero, ajustar para zero
+    const valorRestanteFinal = Math.abs(novoValorRestante) < 0.01 ? 0 : novoValorRestante;
+    
     const comandaAtualizada = await prisma.comanda.update({
       where: { id },
       data: {
-        valorPago: { increment: valorPagamento },
-        valorRestante: { decrement: valorPagamento }
+        valorPago: novoValorPago,
+        valorRestante: valorRestanteFinal
       },
       include: { itens: true }
     });
@@ -440,15 +457,20 @@ router.post('/:id/recalcular', async (req: Request, res: Response) => {
     }
     
     // Calcular total de todos os itens
-    const total = comanda.itens.reduce((sum, item) => sum + item.subtotal, 0);
+    const total = arredondar(comanda.itens.reduce((sum, item) => sum + item.subtotal, 0));
     
     // Calcular valor pago (soma dos itens pagos)
-    const valorPago = comanda.itens
+    const valorPago = arredondar(comanda.itens
       .filter(item => item.pago)
-      .reduce((sum, item) => sum + item.subtotal, 0);
+      .reduce((sum, item) => sum + item.subtotal, 0));
     
     // Calcular valor restante
-    const valorRestante = total - valorPago;
+    let valorRestante = arredondar(total - valorPago);
+    
+    // Se o valor restante for muito próximo de zero, ajustar para zero
+    if (Math.abs(valorRestante) < 0.01) {
+      valorRestante = 0;
+    }
     
     const comandaAtualizada = await prisma.comanda.update({
       where: { id },
