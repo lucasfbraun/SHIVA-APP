@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-purple-primary/20;
+  }
+  
+  body {
+    @apply bg-background-primary text-text-primary font-sans antialiased;
+  }
+
+  html, body, #root {
+    @apply h-full;
+  }
+}
+
+@layer components {
+  /* Botão primário com glow */
+  .btn-primary {
+    @apply bg-purple-primary text-white font-medium px-6 py-3 rounded-xl 
+           transition-all duration-300 hover:bg-purple-highlight 
+           hover:shadow-glow-purple active:scale-95;
+  }
+
+  /* Botão secundário */
+  .btn-secondary {
+    @apply bg-background-secondary border border-purple-primary text-text-primary 
+           px-6 py-3 rounded-xl transition-all duration-300 
+           hover:bg-purple-primary/10 hover:border-purple-highlight;
+  }
+
+  /* Botão perigo */
+  .btn-danger {
+    @apply bg-red-action text-white px-6 py-3 rounded-xl 
+           transition-all duration-300 hover:bg-red-action/80 
+           hover:shadow-[0_0_15px_rgba(225,6,0,0.6)];
+  }
+
+  /* Card padrão */
+  .card {
+    @apply bg-background-secondary border border-purple-primary/30 
+           rounded-2xl p-6 shadow-glow-purple-sm 
+           transition-all duration-300 hover:border-purple-highlight/50;
+  }
+
+  /* Input padrão */
+  .input {
+    @apply bg-background-secondary border border-purple-primary/30 
+           text-text-primary px-4 py-3 rounded-xl 
+           focus:outline-none focus:border-purple-highlight focus:shadow-glow-purple-sm
+           placeholder:text-text-secondary transition-all duration-300;
+  }
+
+  /* Título principal */
+  .title {
+    @apply font-title text-2xl md:text-3xl font-semibold 
+           bg-gradient-to-r from-purple-highlight to-purple-primary 
+           bg-clip-text text-transparent;
+  }
+
+  /* Container principal */
+  .container-main {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6;
+  }
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1C1C1C;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #6C2BD9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9D4EDD;
+}
+
+/* Animações */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(157, 78, 221, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(157, 78, 221, 0.8);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}

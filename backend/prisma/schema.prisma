@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Produto {
+  id              String   @id @default(uuid())
+  nome            String
+  descricao       String?
+  categoria       String?
+  codigoInterno   String?  @unique
+  custoMedio      Float    @default(0)
+  precoVenda      Float
+  imagemUrl       String?
+  markup          Float?   @default(0)
+  ativo           Boolean  @default(true)
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  estoque         Estoque?
+  entradasEstoque EntradaEstoque[]
+  itensComanda    ItemComanda[]
+  
+  @@map("produtos")
+}
+
+model Estoque {
+  id              String   @id @default(uuid())
+  produtoId       String   @unique
+  quantidade      Float    @default(0)
+  atualizadoEm    DateTime @updatedAt
+
+  produto         Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  
+  @@map("estoques")
+}
+
+model EntradaEstoque {
+  id              String   @id @default(uuid())
+  produtoId       String
+  quantidade      Float
+  custoUnitario   Float
+  observacao      String?
+  criadoEm        DateTime @default(now())
+
+  produto         Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  
+  @@map("entradas_estoque")
+}
+
+model Comanda {
+  id              String   @id @default(uuid())
+  nomeCliente     String
+  status          String   @default("ABERTA") // ABERTA, FECHADA, CANCELADA
+  total           Float    @default(0)
+  dataAbertura    DateTime @default(now())
+  dataFechamento  DateTime?
+  observacao      String?
+
+  itens           ItemComanda[]
+  
+  @@map("comandas")
+}
+
+model ItemComanda {
+  id              String   @id @default(uuid())
+  comandaId       String
+  produtoId       String
+  nomeProduto     String   // Snapshot do nome no momento da venda
+  quantidade      Float
+  precoUnitario   Float
+  subtotal        Float
+  criadoEm        DateTime @default(now())
+
+  comanda         Comanda  @relation(fields: [comandaId], references: [id], onDelete: Cascade)
+  produto         Produto  @relation(fields: [produtoId], references: [id])
+  
+  @@map("itens_comanda")
+}
+
+model OCRCupom {
+  id              String   @id @default(uuid())
+  imagemUrl       String
+  status          String   @default("PENDENTE") // PENDENTE, PROCESSADO, ERRO
+  itensDetectados String?  // JSON com os itens
+  criadoEm        DateTime @default(now())
+  processadoEm    DateTime?
+  
+  @@map("ocr_cupons")
+}
