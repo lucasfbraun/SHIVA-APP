@@ -8,10 +8,14 @@ import { format } from 'date-fns';
 
 export default function Comandas() {
   const [comandas, setComandas] = useState<Comanda[]>([]);
+  const [comandasFiltradas, setComandasFiltradas] = useState<Comanda[]>([]);
   const [clientes, setClientes] = useState<ClienteData[]>([]);
   const [clientesFiltrados, setClientesFiltrados] = useState<ClienteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState<string>('ABERTA');
+  const [pesquisa, setPesquisa] = useState('');
+  const [mes, setMes] = useState(new Date().getMonth() + 1);
+  const [ano, setAno] = useState(new Date().getFullYear());
   const [modalOpen, setModalOpen] = useState(false);
   const [tipoCliente, setTipoCliente] = useState<'cadastrado' | 'informal'>('informal');
   const [clienteId, setClienteId] = useState('');
@@ -23,7 +27,11 @@ export default function Comandas() {
   useEffect(() => {
     loadComandas();
     loadClientes();
-  }, [filtroStatus]);
+  }, [filtroStatus, mes, ano]);
+
+  useEffect(() => {
+    filtrarComandas();
+  }, [comandas, pesquisa]);
 
   const loadClientes = async () => {
     try {
@@ -38,12 +46,42 @@ export default function Comandas() {
     try {
       setLoading(true);
       const data = await comandaService.getAll(filtroStatus);
-      setComandas(data);
+      
+      // Filtrar por mês e ano
+      const inicioMes = new Date(ano, mes - 1, 1);
+      const fimMes = new Date(ano, mes, 0, 23, 59, 59, 999);
+      
+      const filtradas = data.filter((comanda: Comanda) => {
+        const dataComanda = new Date(comanda.dataAbertura);
+        return dataComanda >= inicioMes && dataComanda <= fimMes;
+      });
+      
+      setComandas(filtradas);
     } catch (error) {
       console.error('Erro ao carregar comandas:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const filtrarComandas = () => {
+    if (!pesquisa.trim()) {
+      setComandasFiltradas(comandas);
+      return;
+    }
+
+    const termo = pesquisa.toLowerCase();
+    const filtradas = comandas.filter((comanda) => {
+      return (
+        comanda.nomeCliente.toLowerCase().includes(termo) ||
+        comanda.id.toString().includes(termo)
+      );
+    });
+    setComandasFiltradas(filtradas);
+  };
+
+  const getMesNome = (m: number) => {
+    return new Date(2024, m - 1).toLocaleString('pt-BR', { month: 'long' });
   };
 
   useEffect(() => {
@@ -137,8 +175,9 @@ export default function Comandas() {
         </button>
       </div>
 
-      {/* Filtro */}
-      <div className="card">
+      {/* Filtros */}
+      <div className="card space-y-4">
+        {/* Status */}
         <div className="flex gap-3 overflow-x-auto">
           {['ABERTA', 'FECHADA', 'CANCELADA', ''].map((status) => (
             <button
@@ -154,6 +193,38 @@ export default function Comandas() {
             </button>
           ))}
         </div>
+
+        {/* Pesquisa e Filtros de Data */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary" size={20} />
+            <input
+              type="text"
+              placeholder="Pesquisar por cliente ou número..."
+              value={pesquisa}
+              onChange={(e) => setPesquisa(e.target.value)}
+              className="input w-full pl-10"
+            />
+          </div>
+          <select
+            value={mes}
+            onChange={(e) => setMes(parseInt(e.target.value))}
+            className="input py-2 px-3 text-sm"
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+              <option key={m} value={m}>{getMesNome(m)}</option>
+            ))}
+          </select>
+          <select
+            value={ano}
+            onChange={(e) => setAno(parseInt(e.target.value))}
+            className="input py-2 px-3 text-sm"
+          >
+            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(a => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Lista de Comandas */}
@@ -161,7 +232,7 @@ export default function Comandas() {
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-primary"></div>
         </div>
-      ) : comandas.length === 0 ? (
+      ) : comandasFiltradas.length === 0 ? (
         <div className="card text-center py-12">
           <FileText className="mx-auto text-text-secondary mb-4" size={48} />
           <h3 className="text-xl font-semibold text-text-primary mb-2">
@@ -178,7 +249,7 @@ export default function Comandas() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {comandas.map((comanda) => (
+          {comandasFiltradas.map((comanda) => (
             <Link
               key={comanda.id}
               to={`/comandas/${comanda.id}`}
