@@ -8,6 +8,7 @@ export default function ProdutoForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [loadingProduto, setLoadingProduto] = useState(!!id);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -177,6 +178,22 @@ export default function ProdutoForm() {
                 onChange={handleImageChange}
                 className="hidden"
               />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="btn-secondary flex items-center space-x-2"
+              >
+                <Camera size={20} />
+                <span>Tirar Foto</span>
+              </button>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
