@@ -25,6 +25,7 @@ model Produto {
   descricao       String?
   categoria       String?
   codigoInterno   String?  @unique
+  codigoBarras    String?
   custoMedio      Float    @default(0)
   precoVenda      Float
   imagemUrl       String?

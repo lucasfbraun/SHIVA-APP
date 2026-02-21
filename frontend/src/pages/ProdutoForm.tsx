@@ -19,6 +19,7 @@ export default function ProdutoForm() {
     descricao: '',
     categoria: '',
     codigoInterno: '',
+    codigoBarras: '',
     custoMedio: '',
     precoVenda: '',
     markup: '100',
@@ -39,6 +40,7 @@ export default function ProdutoForm() {
         descricao: produto.descricao || '',
         categoria: produto.categoria || '',
         codigoInterno: produto.codigoInterno || '',
+        codigoBarras: produto.codigoBarras || '',
         custoMedio: produto.custoMedio.toString(),
         precoVenda: produto.precoVenda.toString(),
         markup: produto.markup?.toString() || '100',
@@ -99,6 +101,7 @@ export default function ProdutoForm() {
       data.append('descricao', formData.descricao);
       data.append('categoria', formData.categoria);
       data.append('codigoInterno', formData.codigoInterno);
+      data.append('codigoBarras', formData.codigoBarras);
       data.append('custoMedio', formData.custoMedio || '0');
       data.append('precoVenda', formData.precoVenda);
       data.append('markup', formData.markup || '0');
@@ -262,6 +265,19 @@ export default function ProdutoForm() {
                 placeholder="Ex: COCA2L"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Código de Barras (EAN)
+            </label>
+            <input
+              type="text"
+              value={formData.codigoBarras}
+              onChange={(e) => setFormData({ ...formData, codigoBarras: e.target.value })}
+              className="input w-full"
+              placeholder="Ex: 7894900011517"
+            />
           </div>
         </div>
 

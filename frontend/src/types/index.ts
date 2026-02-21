@@ -4,6 +4,7 @@ export interface Produto {
   descricao?: string;
   categoria?: string;
   codigoInterno?: string;
+  codigoBarras?: string;
   custoMedio: number;
   precoVenda: number;
   imagemUrl?: string;

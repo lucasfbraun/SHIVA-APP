@@ -85,7 +85,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST - Criar produto
 router.post('/', upload.single('imagem'), async (req: Request, res: Response) => {
   try {
-    const { nome, descricao, categoria, codigoInterno, custoMedio, precoVenda, markup } = req.body;
+    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup } = req.body;
     
     // Validações
     if (!nome || !precoVenda) {
@@ -110,6 +110,7 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
         descricao,
         categoria,
         codigoInterno,
+        codigoBarras,
         custoMedio: custoMedio ? parseFloat(custoMedio) : 0,
         precoVenda: precoFinal,
         markup: markup ? parseFloat(markup) : 0,
@@ -133,7 +134,7 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
 router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nome, descricao, categoria, codigoInterno, custoMedio, precoVenda, markup, ativo } = req.body;
+    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, ativo } = req.body;
     
     const produtoExistente = await prisma.produto.findUnique({ where: { id } });
     if (!produtoExistente) {
@@ -157,6 +158,7 @@ router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) 
         ...(descricao !== undefined && { descricao }),
         ...(categoria !== undefined && { categoria }),
         ...(codigoInterno !== undefined && { codigoInterno }),
+        ...(codigoBarras !== undefined && { codigoBarras }),
         ...(custoMedio !== undefined && { custoMedio: parseFloat(custoMedio) }),
         ...(precoVenda !== undefined && { precoVenda: parseFloat(precoVenda) }),
         ...(markup !== undefined && { markup: parseFloat(markup) }),
