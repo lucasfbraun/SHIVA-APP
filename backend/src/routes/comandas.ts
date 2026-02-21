@@ -74,12 +74,21 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Nome do cliente é obrigatório' });
     }
     
+    // Buscar a última comanda para obter o próximo número
+    const ultimaComanda = await prisma.comanda.findFirst({
+      orderBy: { numeroComanda: 'desc' },
+      select: { numeroComanda: true }
+    });
+    
+    const proximoNumero = (ultimaComanda?.numeroComanda || 0) + 1;
+    
     const comanda = await prisma.comanda.create({
       data: {
         nomeCliente,
         observacao,
         clienteId: clienteId || null,
-        status: 'ABERTA'
+        status: 'ABERTA',
+        numeroComanda: proximoNumero
       }
     });
     

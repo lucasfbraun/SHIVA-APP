@@ -36,6 +36,7 @@ export interface EntradaEstoque {
 
 export interface Comanda {
   id: string;
+  numeroComanda: number;
   nomeCliente: string;
   status: 'ABERTA' | 'FECHADA' | 'CANCELADA';
   total: number;

@@ -66,6 +66,7 @@ model EntradaEstoque {
 
 model Comanda {
   id              String   @id @default(uuid())
+  numeroComanda   Int      @unique
   clienteId       String?
   nomeCliente     String
   status          String   @default("ABERTA") // ABERTA, FECHADA, CANCELADA

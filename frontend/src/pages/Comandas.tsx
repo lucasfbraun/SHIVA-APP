@@ -74,6 +74,7 @@ export default function Comandas() {
     const filtradas = comandas.filter((comanda) => {
       return (
         comanda.nomeCliente.toLowerCase().includes(termo) ||
+        comanda.numeroComanda.toString().includes(termo) ||
         comanda.id.toString().includes(termo)
       );
     });
@@ -266,6 +267,12 @@ export default function Comandas() {
                 <p className="text-sm text-text-secondary">
                   {format(new Date(comanda.dataAbertura), 'dd/MM/yyyy HH:mm')}
                 </p>
+              </div>
+
+              {/* Número da Comanda */}
+              <div className="mb-2">
+                <span className="text-xs text-text-secondary">Comanda</span>
+                <p className="text-2xl font-bold text-purple-primary">#{comanda.numeroComanda.toString().padStart(3, '0')}</p>
               </div>
 
               {/* Cliente */}

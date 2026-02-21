@@ -128,7 +128,11 @@ export default function ComandaDetalhes() {
           <ArrowLeft className="text-text-primary" size={24} />
         </button>
         <div className="flex-1">
-          <h1 className="title">{comanda.nomeCliente}</h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="title">Comanda #{comanda.numeroComanda.toString().padStart(3, '0')}</h1>
+            <span className="text-text-secondary">•</span>
+            <span className="text-lg text-text-primary font-semibold">{comanda.nomeCliente}</span>
+          </div>
           <p className="text-text-secondary mt-2">
             Aberta em {format(new Date(comanda.dataAbertura), 'dd/MM/yyyy HH:mm')}
           </p>
