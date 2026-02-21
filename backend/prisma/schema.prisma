@@ -104,3 +104,26 @@ model OCRCupom {
   
   @@map("ocr_cupons")
 }
+
+model Despesa {
+  id              String   @id @default(uuid())
+  descricao       String
+  valor           Float
+  categoria       String   // aluguel, água, luz, combustível, etc
+  tipo            String   @default("VARIÁVEL") // FIXA, VARIÁVEL
+  data            DateTime // data do lançamento
+  isRecorrente    Boolean  @default(false)
+  mesesRecorrencia Int? // quantos meses a despesa fixa vai se repetir
+  mesInicio       Int? // mês de início (1-12)
+  anoInicio       Int? // ano de início
+  observacao      String?
+  paga            Boolean  @default(false)
+  dataPagamento   DateTime?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  @@map("despesas")
+  @@index([data])
+  @@index([tipo])
+  @@index([categoria])
+}

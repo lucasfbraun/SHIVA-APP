@@ -9,6 +9,8 @@ import Comandas from './pages/Comandas';
 import ComandaDetalhes from './pages/ComandaDetalhes';
 import Relatorios from './pages/Relatorios';
 import OCRCupom from './pages/OCRCupom';
+import Despesas from './pages/Despesas';
+import RelatorioDespesas from './pages/RelatorioDespesas';
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
         <Route path="comandas" element={<Comandas />} />
         <Route path="comandas/:id" element={<ComandaDetalhes />} />
         <Route path="relatorios" element={<Relatorios />} />
+        <Route path="relatoriodespesas" element={<RelatorioDespesas />} />
+        <Route path="despesas" element={<Despesas />} />
         <Route path="ocr" element={<OCRCupom />} />
       </Route>
     </Routes>
