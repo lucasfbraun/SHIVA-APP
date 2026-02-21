@@ -1,7 +1,7 @@
 FROM node:18-alpine
 
-# Instalar dependências necessárias para o Prisma
-RUN apk add --no-cache openssl libc6-compat
+# Instalar dependências necessárias para o Prisma e Tesseract OCR
+RUN apk add --no-cache openssl libc6-compat tesseract-ocr tesseract-ocr-data-por poppler-utils
 
 WORKDIR /app
 

@@ -65,15 +65,15 @@ export default function OCRCupom() {
       <div>
         <h1 className="title">OCR de Cupom Fiscal</h1>
         <p className="text-text-secondary mt-2">
-          Faça upload de um cupom fiscal para identificar produtos automaticamente (MODO SIMULAÇÃO)
+          Faça upload de uma imagem ou PDF do cupom fiscal para extrair produtos automaticamente
         </p>
       </div>
 
       {/* Aviso */}
-      <div className="card bg-purple-primary/10 border-purple-primary">
+      <div className="card bg-blue-500/10 border-blue-500/30">
         <p className="text-text-primary">
-          <strong>📸 Modo Simulação:</strong> O sistema está configurado para simular a leitura de cupons.
-          Na versão final, será integrado com OCR real (Tesseract).
+          <strong>📸 Tesseract OCR:</strong> O sistema extrai texto automaticamente de imagens e PDFs.
+          Revise os dados detectados antes de confirmar a entrada no estoque.
         </p>
       </div>
 
@@ -103,7 +103,7 @@ export default function OCRCupom() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.pdf"
               capture="environment"
               onChange={handleImageChange}
               className="hidden"
@@ -163,11 +163,10 @@ export default function OCRCupom() {
             ))}
           </div>
 
-          <div className="bg-purple-primary/10 border border-purple-primary/30 rounded-lg p-4 mb-4">
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
             <p className="text-text-primary text-sm">
-              <strong>⚠️ Próximos passos:</strong> Na versão final, você poderá confirmar estes itens
-              e dar entrada automática no estoque. Por enquanto, cadastre os produtos manualmente
-              e use a funcionalidade de entrada de estoque.
+              <strong>✅ Itens extraídos com sucesso!</strong> Revise os dados e cadastre os produtos
+              no sistema antes de realizar a entrada no estoque.
             </p>
           </div>
 

@@ -3,6 +3,8 @@ import prisma from '../lib/prisma';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import tesseract from 'node-tesseract-ocr';
+import pdfParse from 'pdf-parse';
 
 const router = Router();
 
@@ -25,16 +27,63 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp/;
+    const allowedTypes = /jpeg|jpg|png|webp|pdf/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    const mimetype = file.mimetype === 'application/pdf' || allowedTypes.test(file.mimetype);
     
     if (mimetype && extname) {
       return cb(null, true);
     }
-    cb(new Error('Apenas imagens são permitidas'));
+    cb(new Error('Apenas imagens (JPEG, PNG, WebP) e PDFs são permitidos'));
   }
 });
+
+// Função para extrair texto de arquivo (imagem ou PDF)
+async function extrairTexto(filePath: string): Promise<string> {
+  const ext = path.extname(filePath).toLowerCase();
+  
+  if (ext === '.pdf') {
+    // Extrair texto de PDF
+    const dataBuffer = fs.readFileSync(filePath);
+    const data = await pdfParse(dataBuffer);
+    return data.text;
+  } else {
+    // Extrair texto de imagem com Tesseract (português)
+    const config = {
+      lang: 'por',
+      oem: 1,
+      psm: 3,
+    };
+    const text = await tesseract.recognize(filePath, config);
+    return text;
+  }
+}
+
+// Função para parsear texto de cupom fiscal
+function parsearCupomFiscal(texto: string): Array<{ nome: string; quantidade: number; precoUnitario: number }> {
+  const itens: Array<{ nome: string; quantidade: number; precoUnitario: number }> = [];
+  const linhas = texto.split('\n');
+  
+  // Regex para detectar linhas com padrão de item:
+  // Exemplos: "COCA COLA 2L  5x3.00" ou "001 AGUA MINERAL 500ML 2 x 1.50"
+  const regexItem = /([A-ZÀ-Ú0-9\s]+?)\s+(\d+)[\s]*[xX×]?[\s]*(\d+[,.]\d{2})/i;
+  
+  for (const linha of linhas) {
+    const match = linha.match(regexItem);
+    if (match) {
+      const nome = match[1].trim().replace(/^\d+\s+/, ''); // Remove número inicial se houver
+      const quantidade = parseInt(match[2]);
+      const precoStr = match[3].replace(',', '.');
+      const precoUnitario = parseFloat(precoStr);
+      
+      if (nome && quantidade > 0 && precoUnitario > 0) {
+        itens.push({ nome, quantidade, precoUnitario });
+      }
+    }
+  }
+  
+  return itens;
+}
 
 // POST - Upload e processamento de cupom fiscal (STUB)
 router.post('/processar-cupom', upload.single('cupom'), async (req: Request, res: Response) => {
@@ -53,31 +102,48 @@ router.post('/processar-cupom', upload.single('cupom'), async (req: Request, res
       }
     });
     
-    // TODO: Integrar com Tesseract OCR
-    // Por enquanto, retorna um stub simulando itens detectados
-    const itensSimulados = [
-      { nome: 'COCA COLA 2L', quantidade: 5, precoUnitario: 3.00 },
-      { nome: 'AGUA MINERAL 500ML', quantidade: 2, precoUnitario: 1.50 },
-      { nome: 'SUCO DEL VALLE 1L', quantidade: 3, precoUnitario: 5.00 }
-    ];
-    
-    // Atualizar registro com itens detectados
-    const ocrAtualizado = await prisma.oCRCupom.update({
-      where: { id: ocrCupom.id },
-      data: {
-        itensDetectados: JSON.stringify(itensSimulados),
-        status: 'PROCESSADO',
-        processadoEm: new Date()
-      }
-    });
-    
-    res.json({
-      id: ocrAtualizado.id,
-      imagemUrl: ocrAtualizado.imagemUrl,
-      itensDetectados: itensSimulados,
-      status: ocrAtualizado.status,
-      mensagem: 'Cupom processado (modo simulação). Confirme os itens antes de dar entrada no estoque.'
-    });
+    try {
+      // Construir caminho completo do arquivo
+      const filePath = path.join(process.cwd(), 'uploads', 'cupons', req.file.filename);
+      
+      // Extrair texto do arquivo (imagem ou PDF)
+      const textoExtraido = await extrairTexto(filePath);
+      
+      // Parsear texto para identificar itens do cupom
+      const itensDetectados = parsearCupomFiscal(textoExtraido);
+      
+      // Atualizar registro com itens detectados
+      const ocrAtualizado = await prisma.oCRCupom.update({
+        where: { id: ocrCupom.id },
+        data: {
+          itensDetectados: JSON.stringify(itensDetectados),
+          status: 'PROCESSADO',
+          processadoEm: new Date()
+        }
+      });
+      
+      res.json({
+        id: ocrAtualizado.id,
+        imagemUrl: ocrAtualizado.imagemUrl,
+        itensDetectados,
+        status: ocrAtualizado.status,
+        textoExtraido, // Retornar texto bruto para debug/conferência
+        mensagem: itensDetectados.length > 0 
+          ? `${itensDetectados.length} item(ns) detectado(s). Confirme os dados antes de dar entrada no estoque.`
+          : 'Nenhum item foi detectado no cupom. Verifique a qualidade da imagem.'
+      });
+    } catch (ocrError: any) {
+      // Se OCR falhar, marcar como erro
+      await prisma.oCRCupom.update({
+        where: { id: ocrCupom.id },
+        data: {
+          status: 'ERRO',
+          processadoEm: new Date()
+        }
+      });
+      
+      throw new Error(`Erro ao processar OCR: ${ocrError.message}`);
+    }
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Erro ao processar cupom' });
   }
