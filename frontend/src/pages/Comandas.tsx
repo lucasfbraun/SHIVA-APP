@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, FileText, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, XCircle, Search } from 'lucide-react';
 import { comandaService } from '@/services/comandaService';
 import { clienteService, ClienteData } from '@/services/clienteService';
 import { Comanda } from '@/types';
@@ -9,12 +9,14 @@ import { format } from 'date-fns';
 export default function Comandas() {
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [clientes, setClientes] = useState<ClienteData[]>([]);
+  const [clientesFiltrados, setClientesFiltrados] = useState<ClienteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState<string>('ABERTA');
   const [modalOpen, setModalOpen] = useState(false);
   const [tipoCliente, setTipoCliente] = useState<'cadastrado' | 'informal'>('informal');
   const [clienteId, setClienteId] = useState('');
   const [nomeCliente, setNomeCliente] = useState('');
+  const [buscaCliente, setBuscaCliente] = useState('');
   const [observacao, setObservacao] = useState('');
   const [criando, setCriando] = useState(false);
 
@@ -44,6 +46,17 @@ export default function Comandas() {
     }
   };
 
+  useEffect(() => {
+    const termo = buscaCliente.toLowerCase();
+    const filtered = clientes.filter(
+      (cliente) =>
+        cliente.nomeCompleto.toLowerCase().includes(termo) ||
+        cliente.telefone.toLowerCase().includes(termo) ||
+        cliente.cpf.toLowerCase().includes(termo)
+    );
+    setClientesFiltrados(filtered);
+  }, [buscaCliente, clientes]);
+
   const handleCriarComanda = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -69,6 +82,7 @@ export default function Comandas() {
       setNomeCliente('');
       setObservacao('');
       setClienteId('');
+      setBuscaCliente('');
       setTipoCliente('informal');
       setModalOpen(false);
       loadComandas();
@@ -274,20 +288,58 @@ export default function Comandas() {
                   <label className="block text-sm font-medium text-text-primary mb-2">
                     Selecione um Cliente *
                   </label>
-                  <select
-                    value={clienteId}
-                    onChange={(e) => setClienteId(e.target.value)}
-                    className="input w-full"
-                    required
-                    autoFocus
-                  >
-                    <option value="">Selecione um cliente...</option>
-                    {clientes.map((cliente) => (
-                      <option key={cliente.id} value={cliente.id || ''}>
-                        {cliente.nomeCompleto}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 text-text-secondary" size={18} />
+                      <input
+                        type="text"
+                        value={buscaCliente}
+                        onChange={(e) => setBuscaCliente(e.target.value)}
+                        placeholder="Buscar por nome, telefone ou CPF..."
+                        className="input w-full pl-10"
+                        autoFocus
+                      />
+                    </div>
+                    
+                    {buscaCliente && clientesFiltrados.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-background-secondary border border-purple-primary/30 rounded-lg shadow-glow-purple z-50 max-h-64 overflow-y-auto">
+                        {clientesFiltrados.map((cliente) => (
+                          <button
+                            key={cliente.id}
+                            type="button"
+                            onClick={() => {
+                              setClienteId(cliente.id || '');
+                              setBuscaCliente('');
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-purple-primary/20 transition-colors border-b border-purple-primary/10 last:border-0"
+                          >
+                            <div className="font-medium text-text-primary">{cliente.nomeCompleto}</div>
+                            <div className="text-xs text-text-secondary">
+                              {cliente.telefone} • {cliente.cpf}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {buscaCliente && clientesFiltrados.length === 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-background-secondary border border-purple-primary/30 rounded-lg p-4 text-center text-text-secondary text-sm">
+                        Nenhum cliente encontrado com "{buscaCliente}"
+                      </div>
+                    )}
+                  </div>
+                  
+                  {clienteId && clientes.find((c) => c.id === clienteId) && (
+                    <div className="mt-2 p-3 bg-purple-primary/10 border border-purple-primary/30 rounded-lg">
+                      <div className="font-medium text-text-primary">
+                        {clientes.find((c) => c.id === clienteId)?.nomeCompleto}
+                      </div>
+                      <div className="text-sm text-text-secondary">
+                        {clientes.find((c) => c.id === clienteId)?.telefone}
+                      </div>
+                    </div>
+                  )}
+                  
                   {clientes.length === 0 && (
                     <p className="text-sm text-text-secondary mt-2">
                       Nenhum cliente cadastrado. Use "Informal" ou cadastre um cliente.
@@ -316,6 +368,7 @@ export default function Comandas() {
                     setNomeCliente('');
                     setObservacao('');
                     setClienteId('');
+                    setBuscaCliente('');
                     setTipoCliente('informal');
                   }}
                   className="btn-secondary flex-1"

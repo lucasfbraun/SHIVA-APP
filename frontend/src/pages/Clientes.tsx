@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Trash2, Edit2, Plus } from 'lucide-react';
+import { Trash2, Edit2, Plus, Search } from 'lucide-react';
 import { clienteService, ClienteData } from '@/services/clienteService';
 
 export default function Clientes() {
   const [clientes, setClientes] = useState<ClienteData[]>([]);
+  const [clientesFiltrados, setClientesFiltrados] = useState<ClienteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [busca, setBusca] = useState('');
   const [formData, setFormData] = useState({
     nomeCompleto: '',
     telefone: '',
@@ -16,6 +18,17 @@ export default function Clientes() {
   useEffect(() => {
     carregarClientes();
   }, []);
+
+  useEffect(() => {
+    // Filtrar clientes por nome
+    const filtro = busca.toLowerCase();
+    const filtered = clientes.filter(cliente =>
+      cliente.nomeCompleto.toLowerCase().includes(filtro) ||
+      (cliente.telefone && cliente.telefone.includes(filtro)) ||
+      (cliente.cpf && cliente.cpf.includes(filtro))
+    );
+    setClientesFiltrados(filtered);
+  }, [busca, clientes]);
 
   const carregarClientes = async () => {
     try {
@@ -104,6 +117,20 @@ export default function Clientes() {
         </button>
       </div>
 
+      {/* Busca */}
+      <div className="card">
+        <div className="flex items-center gap-3 bg-bg-input/50 rounded-lg px-4 py-3">
+          <Search size={20} className="text-text-secondary" />
+          <input
+            type="text"
+            className="bg-transparent outline-none w-full text-text-primary placeholder-text-secondary/70"
+            placeholder="Buscar por nome, telefone ou CPF..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+      </div>
+
       {/* Form Modal */}
       {showForm && (
         <div className="modal-overlay">
@@ -171,6 +198,7 @@ export default function Clientes() {
       {/* Tabela de Clientes */}
       <div className="card">
         {clientes.length > 0 ? (
+          clientesFiltrados.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -184,7 +212,7 @@ export default function Clientes() {
                 </tr>
               </thead>
               <tbody>
-                {clientes.map((cliente) => (
+                {clientesFiltrados.map((cliente) => (
                   <tr key={cliente.id} className="border-b border-purple-primary/10 hover:bg-background-primary/50">
                     <td className="px-4 py-3 font-medium text-text-primary">{cliente.nomeCompleto}</td>
                     <td className="px-4 py-3 text-text-secondary">{cliente.telefone || '-'}</td>
@@ -216,6 +244,11 @@ export default function Clientes() {
               </tbody>
             </table>
           </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-text-secondary">Nenhum cliente encontrado com "{busca}"</p>
+            </div>
+          )
         ) : (
           <div className="text-center py-12">
             <p className="text-text-secondary">Nenhum cliente cadastrado</p>
