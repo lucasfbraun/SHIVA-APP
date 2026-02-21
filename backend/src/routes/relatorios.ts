@@ -288,4 +288,56 @@ router.get('/margem-lucro', async (req: Request, res: Response) => {
   }
 });
 
+// GET - Top clientes
+router.get('/top-clientes/ranking', async (req: Request, res: Response) => {
+  try {
+    const { dataInicio, dataFim, limite = 10 } = req.query;
+
+    const filtroData: any = {};
+    if (dataInicio) filtroData.gte = new Date(String(dataInicio));
+    if (dataFim) filtroData.lte = new Date(String(dataFim));
+
+    const whereClause: any = { status: 'FECHADA' };
+    if (Object.keys(filtroData).length > 0) {
+      whereClause.dataFechamento = filtroData;
+    }
+
+    const comandas = await prisma.comanda.findMany({
+      where: whereClause,
+      include: {
+        cliente: true
+      }
+    });
+
+    // Agrupar por cliente
+    const clientesMap: { [key: string]: any } = {};
+
+    comandas.forEach(comanda => {
+      const chaveCliente = comanda.clienteId || 'Cliente não cadastrado';
+      const nomeCliente = comanda.cliente?.nomeCompleto || comanda.nomeCliente;
+
+      if (!clientesMap[chaveCliente]) {
+        clientesMap[chaveCliente] = {
+          clienteId: comanda.clienteId,
+          nomeCliente,
+          totalGasto: 0,
+          qtdComandas: 0
+        };
+      }
+
+      clientesMap[chaveCliente].totalGasto += comanda.total;
+      clientesMap[chaveCliente].qtdComandas += 1;
+    });
+
+    // Converter para array e ordenar
+    const ranking = Object.values(clientesMap)
+      .sort((a: any, b: any) => b.totalGasto - a.totalGasto)
+      .slice(0, parseInt(String(limite)));
+
+    res.json(ranking);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao buscar top clientes' });
+  }
+});
+
 export default router;

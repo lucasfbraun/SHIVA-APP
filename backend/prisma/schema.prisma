@@ -66,6 +66,7 @@ model EntradaEstoque {
 
 model Comanda {
   id              String   @id @default(uuid())
+  clienteId       String?
   nomeCliente     String
   status          String   @default("ABERTA") // ABERTA, FECHADA, CANCELADA
   total           Float    @default(0)
@@ -74,8 +75,25 @@ model Comanda {
   observacao      String?
 
   itens           ItemComanda[]
+  cliente         Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   
   @@map("comandas")
+}
+
+model Cliente {
+  id              String   @id @default(uuid())
+  nomeCompleto    String
+  telefone        String?
+  cpf             String?  @unique
+  totalGasto      Float    @default(0)
+  qtdComandas     Int      @default(0)
+  ativo           Boolean  @default(true)
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  comandas        Comanda[]
+  
+  @@map("clientes")
 }
 
 model ItemComanda {

@@ -8,6 +8,7 @@ import comandasRouter from './routes/comandas';
 import relatoriosRouter from './routes/relatorios';
 import ocrRouter from './routes/ocr';
 import despesasRouter from './routes/despesas';
+import clientesRouter from './routes/clientes';
 import { authMiddleware } from './lib/authMiddleware';
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use('/api/comandas', authMiddleware, comandasRouter);
 app.use('/api/relatorios', authMiddleware, relatoriosRouter);
 app.use('/api/ocr', authMiddleware, ocrRouter);
 app.use('/api/despesas', authMiddleware, despesasRouter);
+app.use('/api/clientes', authMiddleware, clientesRouter);
 
 // Error handler
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

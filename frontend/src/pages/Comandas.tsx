@@ -2,21 +2,35 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, FileText, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { comandaService } from '@/services/comandaService';
+import { clienteService, ClienteData } from '@/services/clienteService';
 import { Comanda } from '@/types';
 import { format } from 'date-fns';
 
 export default function Comandas() {
   const [comandas, setComandas] = useState<Comanda[]>([]);
+  const [clientes, setClientes] = useState<ClienteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState<string>('ABERTA');
   const [modalOpen, setModalOpen] = useState(false);
+  const [tipoCliente, setTipoCliente] = useState<'cadastrado' | 'informal'>('informal');
+  const [clienteId, setClienteId] = useState('');
   const [nomeCliente, setNomeCliente] = useState('');
   const [observacao, setObservacao] = useState('');
   const [criando, setCriando] = useState(false);
 
   useEffect(() => {
     loadComandas();
+    loadClientes();
   }, [filtroStatus]);
+
+  const loadClientes = async () => {
+    try {
+      const data = await clienteService.getAll();
+      setClientes(data);
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
+    }
+  };
 
   const loadComandas = async () => {
     try {
@@ -33,16 +47,29 @@ export default function Comandas() {
   const handleCriarComanda = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!nomeCliente.trim()) {
-      alert('Nome do cliente é obrigatório');
-      return;
+    let clienteName = nomeCliente.trim();
+    
+    if (tipoCliente === 'cadastrado') {
+      if (!clienteId) {
+        alert('Selecione um cliente');
+        return;
+      }
+      const cliente = clientes.find(c => c.id === clienteId);
+      clienteName = cliente?.nomeCompleto || '';
+    } else {
+      if (!clienteName) {
+        alert('Nome do cliente é obrigatório');
+        return;
+      }
     }
 
     try {
       setCriando(true);
-      await comandaService.create(nomeCliente, observacao);
+      await comandaService.create(clienteName, observacao, tipoCliente === 'cadastrado' ? clienteId : undefined);
       setNomeCliente('');
       setObservacao('');
+      setClienteId('');
+      setTipoCliente('informal');
       setModalOpen(false);
       loadComandas();
     } catch (error: any) {
@@ -188,20 +215,86 @@ export default function Comandas() {
             <h2 className="text-xl font-semibold text-text-primary mb-4">Nova Comanda</h2>
             
             <form onSubmit={handleCriarComanda} className="space-y-4">
+              {/* Tipo de Cliente */}
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Nome do Cliente *
+                <label className="block text-sm font-medium text-text-primary mb-3">
+                  Tipo de Cliente
                 </label>
-                <input
-                  type="text"
-                  value={nomeCliente}
-                  onChange={(e) => setNomeCliente(e.target.value)}
-                  className="input w-full"
-                  placeholder="Digite o nome"
-                  autoFocus
-                  required
-                />
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTipoCliente('informal');
+                      setClienteId('');
+                      setNomeCliente('');
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                      tipoCliente === 'informal'
+                        ? 'bg-purple-primary text-white'
+                        : 'bg-background-primary text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    Informal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTipoCliente('cadastrado');
+                      setNomeCliente('');
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                      tipoCliente === 'cadastrado'
+                        ? 'bg-purple-primary text-white'
+                        : 'bg-background-primary text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    Cadastrado
+                  </button>
+                </div>
               </div>
+
+              {/* Campo de Cliente */}
+              {tipoCliente === 'informal' ? (
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Nome do Cliente *
+                  </label>
+                  <input
+                    type="text"
+                    value={nomeCliente}
+                    onChange={(e) => setNomeCliente(e.target.value)}
+                    className="input w-full"
+                    placeholder="Digite o nome"
+                    autoFocus
+                    required
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Selecione um Cliente *
+                  </label>
+                  <select
+                    value={clienteId}
+                    onChange={(e) => setClienteId(e.target.value)}
+                    className="input w-full"
+                    required
+                    autoFocus
+                  >
+                    <option value="">Selecione um cliente...</option>
+                    {clientes.map((cliente) => (
+                      <option key={cliente.id} value={cliente.id || ''}>
+                        {cliente.nomeCompleto}
+                      </option>
+                    ))}
+                  </select>
+                  {clientes.length === 0 && (
+                    <p className="text-sm text-text-secondary mt-2">
+                      Nenhum cliente cadastrado. Use "Informal" ou cadastre um cliente.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
@@ -222,6 +315,8 @@ export default function Comandas() {
                     setModalOpen(false);
                     setNomeCliente('');
                     setObservacao('');
+                    setClienteId('');
+                    setTipoCliente('informal');
                   }}
                   className="btn-secondary flex-1"
                 >

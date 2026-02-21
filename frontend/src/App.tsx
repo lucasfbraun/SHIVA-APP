@@ -7,6 +7,7 @@ import Produtos from './pages/Produtos';
 import ProdutoForm from './pages/ProdutoForm';
 import Comandas from './pages/Comandas';
 import ComandaDetalhes from './pages/ComandaDetalhes';
+import Clientes from './pages/Clientes';
 import Relatorios from './pages/Relatorios';
 import OCRCupom from './pages/OCRCupom';
 import Despesas from './pages/Despesas';
@@ -25,6 +26,7 @@ function App() {
         <Route path="produtos/editar/:id" element={<ProdutoForm />} />
         <Route path="comandas" element={<Comandas />} />
         <Route path="comandas/:id" element={<ComandaDetalhes />} />
+        <Route path="clientes" element={<Clientes />} />
         <Route path="relatorios" element={<Relatorios />} />
         <Route path="despesas" element={<Despesas />} />
         <Route path="ocr" element={<OCRCupom />} />

@@ -12,6 +12,7 @@ export default function Relatorios() {
   const [ticketMedio, setTicketMedio] = useState<any>(null);
   const [topProdutos, setTopProdutos] = useState<any[]>([]);
   const [margemLucro, setMargemLucro] = useState<any>(null);
+  const [topClientes, setTopClientes] = useState<any[]>([]);
 
   // Despesas
   const [mes, setMes] = useState(new Date().getMonth() + 1);
@@ -34,10 +35,11 @@ export default function Relatorios() {
       const dataInicio = new Date();
       dataInicio.setDate(hoje.getDate() - parseInt(periodo));
 
-      const [ticketData, produtosData, margemData] = await Promise.all([
+      const [ticketData, produtosData, margemData, clientesData] = await Promise.all([
         relatorioService.getTicketMedio(dataInicio.toISOString(), hoje.toISOString()),
         relatorioService.getProdutosMaisVendidos(5, dataInicio.toISOString(), hoje.toISOString()),
-        relatorioService.getMargemLucro(dataInicio.toISOString(), hoje.toISOString())
+        relatorioService.getMargemLucro(dataInicio.toISOString(), hoje.toISOString()),
+        relatorioService.getTopClientes(10, dataInicio.toISOString(), hoje.toISOString())
       ]);
 
       // Extrair o valor de ticketMedio do objeto retornado
@@ -47,11 +49,15 @@ export default function Relatorios() {
       setTopProdutos(produtos);
       // Extrair a margem do objeto retornado
       setMargemLucro(margemData?.margemPercentual || 0);
+      // Processar clientes
+      const clientes = Array.isArray(clientesData) ? clientesData : [];
+      setTopClientes(clientes);
     } catch (error) {
       console.error('Erro ao carregar relatórios:', error);
       setTicketMedio(0);
       setTopProdutos([]);
       setMargemLucro(0);
+      setTopClientes([]);
     } finally {
       setLoading(false);
     }
@@ -133,6 +139,7 @@ export default function Relatorios() {
           setPeriodo={setPeriodo}
           ticketMedio={ticketMedio}
           topProdutos={topProdutos}
+          topClientes={topClientes}
           margemLucro={margemLucro}
         />
       ) : (
@@ -150,7 +157,7 @@ export default function Relatorios() {
 }
 
 // Componente de Relatório de Vendas
-function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, margemLucro }: any) {
+function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topClientes, margemLucro }: any) {
   return (
     <div className="space-y-6">
       {/* Período Selection */}
@@ -205,6 +212,28 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, margem
           </p>
         </div>
       </div>
+
+      {/* Top Clientes */}
+      {topClientes && topClientes.length > 0 && (
+        <div className="card">
+          <h2 className="text-lg font-semibold text-purple-primary mb-4">Top Clientes</h2>
+          <div className="space-y-3">
+            {topClientes.slice(0, 5).map((cliente: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-bg-input/50 rounded">
+                <div>
+                  <p className="font-medium text-text-primary">{cliente.nomeCliente}</p>
+                  <p className="text-sm text-text-secondary">{cliente.qtdComandas} comandas</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-purple-primary">
+                    R$ {cliente.totalGasto?.toFixed(2) || '0.00'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Top Produtos */}
       {topProdutos && topProdutos.length > 0 && (

@@ -13,10 +13,11 @@ export const comandaService = {
     return data;
   },
 
-  async create(nomeCliente: string, observacao?: string) {
+  async create(nomeCliente: string, observacao?: string, clienteId?: string) {
     const { data } = await api.post<Comanda>('/comandas', {
       nomeCliente,
-      observacao
+      observacao,
+      clienteId
     });
     return data;
   },

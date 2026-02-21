@@ -68,7 +68,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST - Abrir nova comanda
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { nomeCliente, observacao } = req.body;
+    const { nomeCliente, observacao, clienteId } = req.body;
     
     if (!nomeCliente) {
       return res.status(400).json({ error: 'Nome do cliente é obrigatório' });
@@ -78,6 +78,7 @@ router.post('/', async (req: Request, res: Response) => {
       data: {
         nomeCliente,
         observacao,
+        clienteId: clienteId || null,
         status: 'ABERTA'
       }
     });

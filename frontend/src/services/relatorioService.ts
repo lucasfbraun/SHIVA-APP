@@ -47,5 +47,15 @@ export const relatorioService = {
     
     const { data } = await api.get(`/relatorios/margem-lucro?${params}`);
     return data;
+  },
+
+  async getTopClientes(limite = 10, dataInicio?: string, dataFim?: string) {
+    const params = new URLSearchParams();
+    params.append('limite', String(limite));
+    if (dataInicio) params.append('dataInicio', dataInicio);
+    if (dataFim) params.append('dataFim', dataFim);
+    
+    const { data } = await api.get(`/relatorios/top-clientes/ranking?${params}`);
+    return data;
   }
 };
