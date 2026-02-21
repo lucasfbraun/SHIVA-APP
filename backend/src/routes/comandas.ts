@@ -157,7 +157,8 @@ router.post('/:id/itens', async (req: Request, res: Response) => {
       await tx.comanda.update({
         where: { id },
         data: {
-          total: { increment: subtotal }
+          total: { increment: subtotal },
+          valorRestante: { increment: subtotal }
         }
       });
       
@@ -187,13 +188,19 @@ router.delete('/:id/itens/:itemId', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Item não encontrado' });
     }
     
+    // Não permitir remover item já pago
+    if (item.pago) {
+      return res.status(400).json({ error: 'Não é possível remover item já pago' });
+    }
+    
     // Remover e atualizar total
     await prisma.$transaction(async (tx) => {
       await tx.itemComanda.delete({ where: { id: itemId } });
       await tx.comanda.update({
         where: { id },
         data: {
-          total: { decrement: item.subtotal }
+          total: { decrement: item.subtotal },
+          valorRestante: { decrement: item.subtotal }
         }
       });
     });
@@ -226,6 +233,14 @@ router.post('/:id/fechar', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Comanda vazia não pode ser fechada' });
     }
     
+    // Verificar se há valor restante a pagar
+    if (comanda.valorRestante > 0.01) { // Margem de 1 centavo para erros de arredondamento
+      return res.status(400).json({ 
+        error: 'Ainda há valor pendente de pagamento', 
+        valorRestante: comanda.valorRestante 
+      });
+    }
+    
     // Fechar comanda e dar baixa no estoque
     const resultado = await prisma.$transaction(async (tx) => {
       // Dar baixa no estoque de cada item
@@ -254,6 +269,119 @@ router.post('/:id/fechar', async (req: Request, res: Response) => {
     res.json(resultado);
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Erro ao fechar comanda' });
+  }
+});
+
+// POST - Marcar itens como pagos
+router.post('/:id/pagar-itens', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { itensIds } = req.body; // Array de IDs dos itens a marcar como pagos
+    
+    if (!Array.isArray(itensIds) || itensIds.length === 0) {
+      return res.status(400).json({ error: 'IDs dos itens são obrigatórios' });
+    }
+    
+    const comanda = await prisma.comanda.findUnique({
+      where: { id },
+      include: { itens: true }
+    });
+    
+    if (!comanda) {
+      return res.status(404).json({ error: 'Comanda não encontrada' });
+    }
+    
+    if (comanda.status !== 'ABERTA') {
+      return res.status(400).json({ error: 'Comanda não está aberta' });
+    }
+    
+    // Calcular valor dos itens a marcar como pagos
+    const itensPagar = comanda.itens.filter(item => 
+      itensIds.includes(item.id) && !item.pago
+    );
+    
+    if (itensPagar.length === 0) {
+      return res.status(400).json({ error: 'Nenhum item válido para marcar como pago' });
+    }
+    
+    const valorPagar = itensPagar.reduce((sum, item) => sum + item.subtotal, 0);
+    
+    // Marcar itens como pagos e atualizar comanda
+    const resultado = await prisma.$transaction(async (tx) => {
+      // Marcar itens como pagos
+      await tx.itemComanda.updateMany({
+        where: { id: { in: itensIds } },
+        data: { pago: true }
+      });
+      
+      // Atualizar comanda
+      const comandaAtualizada = await tx.comanda.update({
+        where: { id },
+        data: {
+          valorPago: { increment: valorPagar },
+          valorRestante: { decrement: valorPagar }
+        },
+        include: { itens: true }
+      });
+      
+      return comandaAtualizada;
+    });
+    
+    res.json({ 
+      message: 'Itens marcados como pagos',
+      valorPago: valorPagar,
+      comanda: resultado
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao marcar itens como pagos' });
+  }
+});
+
+// POST - Adicionar pagamento parcial
+router.post('/:id/pagamento-parcial', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { valor } = req.body;
+    
+    if (!valor || parseFloat(valor) <= 0) {
+      return res.status(400).json({ error: 'Valor do pagamento deve ser maior que zero' });
+    }
+    
+    const valorPagamento = parseFloat(valor);
+    
+    const comanda = await prisma.comanda.findUnique({ where: { id } });
+    
+    if (!comanda) {
+      return res.status(404).json({ error: 'Comanda não encontrada' });
+    }
+    
+    if (comanda.status !== 'ABERTA') {
+      return res.status(400).json({ error: 'Comanda não está aberta' });
+    }
+    
+    if (valorPagamento > comanda.valorRestante) {
+      return res.status(400).json({ 
+        error: 'Valor do pagamento excede o valor restante',
+        valorRestante: comanda.valorRestante
+      });
+    }
+    
+    const comandaAtualizada = await prisma.comanda.update({
+      where: { id },
+      data: {
+        valorPago: { increment: valorPagamento },
+        valorRestante: { decrement: valorPagamento }
+      },
+      include: { itens: true }
+    });
+    
+    res.json({
+      message: 'Pagamento parcial registrado',
+      valorPago: valorPagamento,
+      comanda: comandaAtualizada
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao registrar pagamento' });
   }
 });
 

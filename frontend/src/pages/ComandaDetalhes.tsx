@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, CheckCircle, XCircle, Package } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, CheckCircle, XCircle, Package, DollarSign } from 'lucide-react';
 import { comandaService } from '@/services/comandaService';
 import { produtoService } from '@/services/produtoService';
 import { Comanda, Produto } from '@/types';
@@ -16,6 +16,8 @@ export default function ComandaDetalhes() {
   const [produtoSelecionado, setProdutoSelecionado] = useState('');
   const [quantidade, setQuantidade] = useState('1');
   const [adicionando, setAdicionando] = useState(false);
+  const [itensSelecionados, setItensSelecionados] = useState<string[]>([]);
+  const [valorParcial, setValorParcial] = useState('');
 
   useEffect(() => {
     loadComanda();
@@ -77,6 +79,52 @@ export default function ComandaDetalhes() {
       console.error('Erro ao remover item:', error);
       alert(error.response?.data?.error || 'Erro ao remover item');
     }
+  };
+
+  const handlePagarItens = async () => {
+    if (itensSelecionados.length === 0) {
+      alert('Selecione pelo menos um item para pagar');
+      return;
+    }
+
+    try {
+      await comandaService.pagarItens(id!, itensSelecionados);
+      setItensSelecionados([]);
+      loadComanda();
+    } catch (error: any) {
+      console.error('Erro ao pagar itens:', error);
+      alert(error.response?.data?.error || 'Erro ao pagar itens');
+    }
+  };
+
+  const handlePagamentoParcial = async () => {
+    const valor = parseFloat(valorParcial);
+    if (!valor || valor <= 0) {
+      alert('Digite um valor válido');
+      return;
+    }
+
+    if (valor > (comanda?.valorRestante || 0)) {
+      alert(`Valor excede o restante: R$ ${comanda?.valorRestante.toFixed(2)}`);
+      return;
+    }
+
+    try {
+      await comandaService.pagamentoParcial(id!, valor);
+      setValorParcial('');
+      loadComanda();
+    } catch (error: any) {
+      console.error('Erro ao registrar pagamento:', error);
+      alert(error.response?.data?.error || 'Erro ao registrar pagamento');
+    }
+  };
+
+  const toggleItemSelecionado = (itemId: string) => {
+    setItensSelecionados(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
   };
 
   const handleFecharComanda = async () => {
@@ -161,31 +209,64 @@ export default function ComandaDetalhes() {
               R$ {comanda.total.toFixed(2)}
             </p>
           </div>
-          <div className="col-span-2">
-            {isAberta && (
-              <button
-                onClick={() => setModalOpen(true)}
-                className="btn-primary w-full flex items-center justify-center space-x-2"
-              >
-                <Plus size={20} />
-                <span>Adicionar Item</span>
-              </button>
-            )}
+          <div>
+            <p className="text-text-secondary text-sm">Pago</p>
+            <p className="text-2xl font-bold text-green-400 mt-1">
+              R$ {(comanda.valorPago || 0).toFixed(2)}
+            </p>
+          </div>
+          <div>
+            <p className="text-text-secondary text-sm">Restante</p>
+            <p className="text-2xl font-bold text-yellow-400 mt-1">
+              R$ {(comanda.valorRestante || 0).toFixed(2)}
+            </p>
           </div>
         </div>
+        {isAberta && (
+          <button
+            onClick={() => setModalOpen(true)}
+            className="btn-primary w-full flex items-center justify-center space-x-2 mt-4"
+          >
+            <Plus size={20} />
+            <span>Adicionar Item</span>
+          </button>
+        )}
       </div>
 
       {/* Itens */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-text-primary mb-4">Itens da Comanda</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-text-primary">Itens da Comanda</h2>
+          {isAberta && itensSelecionados.length > 0 && (
+            <button
+              onClick={handlePagarItens}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <CheckCircle size={18} />
+              <span>Pagar {itensSelecionados.length} item(ns)</span>
+            </button>
+          )}
+        </div>
         
         {comanda.itens && comanda.itens.length > 0 ? (
           <div className="space-y-3">
             {comanda.itens.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between p-4 bg-background-primary rounded-lg"
+                className={`flex items-center justify-between p-4 rounded-lg ${
+                  item.pago 
+                    ? 'bg-green-500/10 border border-green-500/30' 
+                    : 'bg-background-primary'
+                }`}
               >
+                {isAberta && !item.pago && (
+                  <input
+                    type="checkbox"
+                    checked={itensSelecionados.includes(item.id)}
+                    onChange={() => toggleItemSelecionado(item.id)}
+                    className="mr-3 w-5 h-5"
+                  />
+                )}
                 <div className="flex items-center space-x-4 flex-1">
                   <div className="w-12 h-12 rounded-lg bg-background-secondary flex items-center justify-center">
                     {item.produto?.imagemUrl ? (
@@ -199,7 +280,14 @@ export default function ComandaDetalhes() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-text-primary">{item.nomeProduto}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-text-primary">{item.nomeProduto}</p>
+                      {item.pago && (
+                        <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
+                          PAGO
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-text-secondary">
                       {item.quantidade} x R$ {item.precoUnitario.toFixed(2)}
                     </p>
@@ -209,7 +297,7 @@ export default function ComandaDetalhes() {
                   <p className="font-semibold text-purple-highlight">
                     R$ {item.subtotal.toFixed(2)}
                   </p>
-                  {isAberta && (
+                  {isAberta && !item.pago && (
                     <button
                       onClick={() => handleRemoverItem(item.id)}
                       className="p-2 rounded-lg hover:bg-red-action/10 transition-colors"
@@ -226,6 +314,38 @@ export default function ComandaDetalhes() {
         )}
       </div>
 
+      {/* Pagamento Parcial */}
+      {isAberta && comanda.valorRestante > 0 && (
+        <div className="card">
+          <h2 className="text-lg font-semibold text-text-primary mb-4">Pagamento Parcial (Dinheiro)</h2>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                max={comanda.valorRestante}
+                value={valorParcial}
+                onChange={(e) => setValorParcial(e.target.value)}
+                placeholder={`Máx: R$ ${comanda.valorRestante.toFixed(2)}`}
+                className="input w-full"
+              />
+            </div>
+            <button
+              onClick={handlePagamentoParcial}
+              disabled={!valorParcial || parseFloat(valorParcial) <= 0}
+              className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+            >
+              <DollarSign size={20} />
+              <span>Registrar Pagamento</span>
+            </button>
+          </div>
+          <p className="text-text-secondary text-sm mt-2">
+            Exemplo: Cliente vai pagar R$ 50,00 da comanda
+          </p>
+        </div>
+      )}
+
       {/* Ações */}
       {isAberta && (
         <div className="flex gap-4">
@@ -238,8 +358,9 @@ export default function ComandaDetalhes() {
           </button>
           <button
             onClick={handleFecharComanda}
-            disabled={!comanda.itens || comanda.itens.length === 0}
+            disabled={!comanda.itens || comanda.itens.length === 0 || comanda.valorRestante > 0.01}
             className="btn-primary flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={comanda.valorRestante > 0.01 ? `Ainda resta R$ ${comanda.valorRestante.toFixed(2)} a pagar` : ''}
           >
             <CheckCircle size={20} />
             <span>Fechar Comanda</span>

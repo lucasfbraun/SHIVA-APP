@@ -72,6 +72,8 @@ model Comanda {
   nomeCliente     String
   status          String   @default("ABERTA") // ABERTA, FECHADA, CANCELADA
   total           Float    @default(0)
+  valorPago       Float    @default(0)
+  valorRestante   Float    @default(0)
   dataAbertura    DateTime @default(now())
   dataFechamento  DateTime?
   observacao      String?
@@ -106,6 +108,7 @@ model ItemComanda {
   quantidade      Float
   precoUnitario   Float
   subtotal        Float
+  pago            Boolean  @default(false)
   criadoEm        DateTime @default(now())
 
   comanda         Comanda  @relation(fields: [comandaId], references: [id], onDelete: Cascade)

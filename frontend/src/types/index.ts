@@ -41,6 +41,8 @@ export interface Comanda {
   nomeCliente: string;
   status: 'ABERTA' | 'FECHADA' | 'CANCELADA';
   total: number;
+  valorPago: number;
+  valorRestante: number;
   dataAbertura: string;
   dataFechamento?: string;
   observacao?: string;
@@ -55,6 +57,7 @@ export interface ItemComanda {
   quantidade: number;
   precoUnitario: number;
   subtotal: number;
+  pago: boolean;
   criadoEm: string;
   produto?: {
     nome: string;
