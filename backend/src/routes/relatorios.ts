@@ -90,6 +90,71 @@ router.get('/dashboard', async (req: Request, res: Response) => {
   }
 });
 
+// GET - Resumo completo (faturamento, despesas e lucro líquido)
+router.get('/resumo', async (req: Request, res: Response) => {
+  try {
+    const { dataInicio, dataFim } = req.query;
+
+    const filtroData: any = {};
+    if (dataInicio) filtroData.gte = new Date(String(dataInicio));
+    if (dataFim) filtroData.lte = new Date(String(dataFim));
+
+    const whereClause: any = { status: 'FECHADA' };
+    if (Object.keys(filtroData).length > 0) {
+      whereClause.dataFechamento = filtroData;
+    }
+
+    // Faturamento e custo dos produtos
+    const itens = await prisma.itemComanda.findMany({
+      where: { comanda: whereClause },
+      include: {
+        produto: {
+          select: { custoMedio: true }
+        }
+      }
+    });
+
+    let faturamentoTotal = 0;
+    let custoTotal = 0;
+
+    itens.forEach(item => {
+      faturamentoTotal += item.subtotal;
+      custoTotal += item.quantidade * (item.produto.custoMedio || 0);
+    });
+
+    const lucroGrosso = faturamentoTotal - custoTotal;
+    const margemGrossa = faturamentoTotal > 0 ? (lucroGrosso / faturamentoTotal) * 100 : 0;
+
+    // Despesas
+    const despesasData = await prisma.despesa.findMany({
+      where: {
+        status: 'PAGO',
+        ...(Object.keys(filtroData).length > 0 && {
+          dataPagamento: filtroData
+        })
+      }
+    });
+
+    const despesasTotal = despesasData.reduce((acc, d) => acc + d.valor, 0);
+
+    // Lucro líquido (faturamento - custo dos produtos - despesas)
+    const lucroLiquido = faturamentoTotal - custoTotal - despesasTotal;
+    const margemLiquida = faturamentoTotal > 0 ? (lucroLiquido / faturamentoTotal) * 100 : 0;
+
+    res.json({
+      faturamentoTotal: parseFloat(faturamentoTotal.toFixed(2)),
+      custoTotal: parseFloat(custoTotal.toFixed(2)),
+      despesasTotal: parseFloat(despesasTotal.toFixed(2)),
+      lucroGrosso: parseFloat(lucroGrosso.toFixed(2)),
+      margemGrossa: parseFloat(margemGrossa.toFixed(2)),
+      lucroLiquido: parseFloat(lucroLiquido.toFixed(2)),
+      margemLiquida: parseFloat(margemLiquida.toFixed(2))
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao gerar resumo' });
+  }
+});
+
 // GET - Ticket médio
 router.get('/ticket-medio', async (req: Request, res: Response) => {
   try {

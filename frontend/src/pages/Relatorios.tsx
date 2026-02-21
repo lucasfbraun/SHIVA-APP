@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap } from 'lucide-react';
 import { relatorioService } from '@/services/relatorioService';
 import { despesaService } from '@/services/despesaService';
 
@@ -13,6 +13,7 @@ export default function Relatorios() {
   const [topProdutos, setTopProdutos] = useState<any[]>([]);
   const [margemLucro, setMargemLucro] = useState<any>(null);
   const [topClientes, setTopClientes] = useState<any[]>([]);
+  const [resumo, setResumo] = useState<any>(null);
 
   // Despesas
   const [mes, setMes] = useState(new Date().getMonth() + 1);
@@ -35,11 +36,12 @@ export default function Relatorios() {
       const dataInicio = new Date();
       dataInicio.setDate(hoje.getDate() - parseInt(periodo));
 
-      const [ticketData, produtosData, margemData, clientesData] = await Promise.all([
+      const [ticketData, produtosData, margemData, clientesData, resumoData] = await Promise.all([
         relatorioService.getTicketMedio(dataInicio.toISOString(), hoje.toISOString()),
         relatorioService.getProdutosMaisVendidos(5, dataInicio.toISOString(), hoje.toISOString()),
         relatorioService.getMargemLucro(dataInicio.toISOString(), hoje.toISOString()),
-        relatorioService.getTopClientes(10, dataInicio.toISOString(), hoje.toISOString())
+        relatorioService.getTopClientes(10, dataInicio.toISOString(), hoje.toISOString()),
+        relatorioService.getResumo(dataInicio.toISOString(), hoje.toISOString())
       ]);
 
       // Extrair o valor de ticketMedio do objeto retornado
@@ -52,12 +54,15 @@ export default function Relatorios() {
       // Processar clientes
       const clientes = Array.isArray(clientesData) ? clientesData : [];
       setTopClientes(clientes);
+      // Resumo completo
+      setResumo(resumoData);
     } catch (error) {
       console.error('Erro ao carregar relatórios:', error);
       setTicketMedio(0);
       setTopProdutos([]);
       setMargemLucro(0);
       setTopClientes([]);
+      setResumo(null);
     } finally {
       setLoading(false);
     }
@@ -141,6 +146,7 @@ export default function Relatorios() {
           topProdutos={topProdutos}
           topClientes={topClientes}
           margemLucro={margemLucro}
+          resumo={resumo}
         />
       ) : (
         <RelatorioDespesasContent
@@ -157,7 +163,7 @@ export default function Relatorios() {
 }
 
 // Componente de Relatório de Vendas
-function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topClientes, margemLucro }: any) {
+function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topClientes, margemLucro, resumo }: any) {
   return (
     <div className="space-y-6">
       {/* Período Selection */}
@@ -175,8 +181,30 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
         </select>
       </div>
 
-      {/* Cards com métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Cards com métricas principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div key="faturamento" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Faturamento Total</span>
+            <DollarSign className="text-purple-primary" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-purple-primary">
+            R$ {resumo?.faturamentoTotal?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-text-secondary text-xs mt-2">Receita bruta</p>
+        </div>
+
+        <div key="despesas" className="card shadow-lg hover:shadow-xl hover:shadow-red-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Despesas Totais</span>
+            <TrendingDown className="text-red-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-red-500">
+            R$ {resumo?.despesasTotal?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-text-secondary text-xs mt-2">Custos operacionais</p>
+        </div>
+
         <div key="ticket" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-text-secondary text-sm">Ticket Médio</span>
@@ -188,28 +216,40 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
           <p className="text-text-secondary text-xs mt-2">Valor médio por comanda</p>
         </div>
 
-        <div key="margin" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
+        <div key="lucro" className="card shadow-lg hover:shadow-xl hover:shadow-green-500/20 transition">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-text-secondary text-sm">Margem de Lucro</span>
+            <span className="text-text-secondary text-sm">Lucro Líquido</span>
+            <Zap className="text-green-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-green-500">
+            R$ {resumo?.lucroLiquido?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-text-secondary text-xs mt-2">Faturamento - Custos - Despesas</p>
+        </div>
+      </div>
+
+      {/* Cards com margens */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div key="margem-bruta" className="card shadow-lg hover:shadow-xl hover:shadow-blue-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Margem Bruta</span>
+            <TrendingUp className="text-blue-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-blue-500">
+            {resumo?.margemGrossa?.toFixed(1) || '0'}%
+          </div>
+          <p className="text-text-secondary text-xs mt-2">Sobre vendas (sem despesas)</p>
+        </div>
+
+        <div key="margem-liquida" className="card shadow-lg hover:shadow-xl hover:shadow-green-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Margem Líquida</span>
             <TrendingUp className="text-green-500" size={20} />
           </div>
           <div className="text-3xl font-bold text-green-500">
-            {margemLucro?.toFixed(1) || '0'}%
+            {resumo?.margemLiquida?.toFixed(1) || '0'}%
           </div>
-          <p className="text-text-secondary text-xs mt-2">Sobre vendas totais</p>
-        </div>
-
-        <div key="products" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-text-secondary text-sm">Top Produto</span>
-            <Package className="text-purple-primary" size={20} />
-          </div>
-          <div className="text-2xl font-bold text-purple-primary truncate">
-            {topProdutos?.[0]?.nome || '-'}
-          </div>
-          <p className="text-text-secondary text-xs mt-2">
-            {topProdutos?.[0]?.quantidadeVendida || 0} unidades vendidas
-          </p>
+          <p className="text-text-secondary text-xs mt-2">Sobre vendas (com despesas)</p>
         </div>
       </div>
 

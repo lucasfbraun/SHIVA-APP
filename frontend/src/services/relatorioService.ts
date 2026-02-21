@@ -49,6 +49,15 @@ export const relatorioService = {
     return data;
   },
 
+  async getResumo(dataInicio?: string, dataFim?: string) {
+    const params = new URLSearchParams();
+    if (dataInicio) params.append('dataInicio', dataInicio);
+    if (dataFim) params.append('dataFim', dataFim);
+    
+    const { data } = await api.get(`/relatorios/resumo?${params}`);
+    return data;
+  },
+
   async getTopClientes(limite = 10, dataInicio?: string, dataFim?: string) {
     const params = new URLSearchParams();
     params.append('limite', String(limite));
