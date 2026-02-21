@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="logo.jpeg" alt="SHIVA Logo" width="200"/>
+</div>
+
 # SHIVA - Sistema de Gestão
 
 Sistema que fiz pra ajudar uma amiga que tem uma conveniência. Ela tava anotando tudo em caderno e precisava de algo mais organizado pra controlar produtos, comandas e estoque.

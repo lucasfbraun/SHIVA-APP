@@ -30,9 +30,11 @@ export default function Layout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-primary to-purple-highlight flex items-center justify-center shadow-glow-purple-sm">
-                <span className="text-white font-title font-bold text-xl">S</span>
-              </div>
+              <img 
+                src="/logo.jpeg" 
+                alt="SHIVA" 
+                className="w-16 h-16 rounded-lg object-cover shadow-glow-purple-sm"
+              />
               <h1 className="font-title text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-highlight to-purple-primary bg-clip-text text-transparent">
                 SHIVA
               </h1>
