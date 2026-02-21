@@ -127,6 +127,215 @@ frontend/
 **Relatórios:**
 - Só conta comandas fechadas nos cálculos
 - Ticket médio = total vendido / numero de comandas
+
+## 🗄️ Banco de Dados
+
+Usa **SQLite** como banco de dados relacional embarcado. Todos os dados ficam no arquivo `backend/prisma/dev.db`.
+
+### Schema Prisma
+
+```prisma
+// Usuários para autenticação
+model Usuario {
+  id    String   @id @default(cuid())
+  email String   @unique
+  senha String
+  nome  String
+}
+
+// Produtos do catálogo
+model Produto {
+  id            String   @id @default(cuid())
+  nome          String
+  categoria     String
+  codigoInterno String?  @unique
+  precoCusto    Float
+  precoVenda    Float
+  markup        Float    @default(0)
+  foto          String?
+  estoque       Estoque?
+  entradas      EntradaEstoque[]
+  itensComanda  ItemComanda[]
+}
+
+// Controle de estoque por produto
+model Estoque {
+  id         String  @id @default(cuid())
+  produtoId  String  @unique
+  quantidade Int     @default(0)
+  custoMedio Float   @default(0)
+  produto    Produto @relation(fields: [produtoId], references: [id])
+}
+
+// Histórico de entradas de estoque
+model EntradaEstoque {
+  id             String   @id @default(cuid())
+  produtoId      String
+  quantidade     Int
+  custoUnitario  Float
+  custoTotal     Float
+  data           DateTime @default(now())
+  produto        Produto  @relation(fields: [produtoId], references: [id])
+}
+
+// Clientes cadastrados
+model Cliente {
+  id           String   @id @default(cuid())
+  nomeCompleto String
+  telefone     String?
+  cpf          String?  @unique
+  totalGasto   Float    @default(0)
+  totalComandas Int     @default(0)
+  ativo        Boolean  @default(true)
+  comandas     Comanda[]
+}
+
+// Comandas (pedidos dos clientes)
+model Comanda {
+  id             String   @id @default(cuid())
+  clienteId      String?
+  nomeCliente    String?
+  status         String   @default("ABERTA")
+  total          Float    @default(0)
+  dataAbertura   DateTime @default(now())
+  dataFechamento DateTime?
+  cliente        Cliente? @relation(fields: [clienteId], references: [id])
+  itens          ItemComanda[]
+}
+
+// Itens dentro de cada comanda
+model ItemComanda {
+  id         String   @id @default(cuid())
+  comandaId  String
+  produtoId  String
+  quantidade Int
+  precoVenda Float
+  subtotal   Float
+  comanda    Comanda  @relation(fields: [comandaId], references: [id])
+  produto    Produto  @relation(fields: [produtoId], references: [id])
+}
+
+// Despesas do mês
+model Despesa {
+  id              String   @id @default(cuid())
+  descricao       String
+  valor           Float
+  categoria       String
+  tipo            String   @default("VARIAVEL")
+  mesReferencia   Int
+  anoReferencia   Int
+  recorrenteMeses Int      @default(1)
+  dataPagamento   DateTime?
+  status          String   @default("ABERTO")
+}
+```
+
+### Diagrama de Relacionamentos
+
+```
+┌─────────────────┐
+│    USUARIOS     │
+├─────────────────┤
+│ id (PK)         │
+│ email (UNIQUE)  │
+│ senha           │
+│ nome            │
+└─────────────────┘
+
+┌─────────────────┐
+│    PRODUTOS     │
+├─────────────────┤
+│ id (PK)         │
+│ nome            │
+│ categoria       │
+│ precoCusto      │
+│ precoVenda      │
+│ markup          │
+│ foto            │
+└─────────────────┘
+        │
+        ├──→ ┌─────────────────┐
+        │    │    ESTOQUES     │
+        │    ├─────────────────┤
+        │    │ id (PK)         │
+        │    │ produtoId (FK)  │
+        │    │ quantidade      │
+        │    │ custoMedio      │
+        │    └─────────────────┘
+        │
+        ├──→ ┌──────────────────┐
+        │    │ ENTRADAS_ESTOQUE │
+        │    ├──────────────────┤
+        │    │ id (PK)          │
+        │    │ produtoId (FK)   │
+        │    │ quantidade       │
+        │    │ custoUnitario    │
+        │    └──────────────────┘
+        │
+        └──→ ┌──────────────────┐
+             │  ITENS_COMANDA   │
+             ├──────────────────┤
+             │ id (PK)          │
+             │ produtoId (FK)   │
+             │ comandaId (FK)   │
+             │ quantidade       │
+             │ precoVenda       │
+             │ subtotal         │
+             └──────────────────┘
+
+┌─────────────────┐
+│    CLIENTES     │
+├─────────────────┤
+│ id (PK)         │
+│ nomeCompleto    │
+│ telefone        │
+│ cpf (UNIQUE)    │
+│ totalGasto      │
+│ totalComandas   │
+└─────────────────┘
+        │
+        └──→ ┌─────────────────┐
+             │    COMANDAS     │
+             ├─────────────────┤
+             │ id (PK)         │
+             │ clienteId (FK)  │
+             │ nomeCliente     │
+             │ status          │
+             │ total           │
+             │ dataAbertura    │
+             │ dataFechamento  │
+             └─────────────────┘
+                     │
+                     └──→ (ITENS_COMANDA)
+
+┌─────────────────────────┐
+│     DESPESAS            │
+├─────────────────────────┤
+│ id (PK)                 │
+│ descricao               │
+│ valor                   │
+│ categoria               │
+│ tipo (FIXA/VARIAVEL)    │
+│ mesReferencia           │
+│ anoReferencia           │
+│ recorrenteMeses         │
+│ status (ABERTO/PAGO)    │
+└─────────────────────────┘
+```
+
+### Descrição das Tabelas
+
+| Tabela | Descrição |
+|--------|-----------|
+| **usuarios** | Credenciais de acesso ao sistema |
+| **produtos** | Catálogo de produtos disponíveis |
+| **estoques** | Quantidade atual de cada produto |
+| **entradas_estoque** | Histórico de todas as movimentações de entrada |
+| **clientes** | Clientes cadastrados com histórico de gastos |
+| **comandas** | Pedidos dos clientes (abertos/fechados) |
+| **itens_comanda** | Produtos adicionados em cada comanda |
+| **despesas** | Despesas fixas e variáveis do mês |
+
 ## 🚧 Próximas Implementações
 
 - [ ] Integração real com Tesseract OCR
