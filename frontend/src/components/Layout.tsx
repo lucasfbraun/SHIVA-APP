@@ -39,14 +39,14 @@ export default function Layout() {
     <div className="min-h-screen bg-gradient-to-b from-background-primary to-background-secondary">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background-primary/95 backdrop-blur-sm border-b border-purple-primary/30">
-        <div className="container-main">
+        <div className="container-main px-4 md:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center space-x-3 flex-shrink-0">
               <img 
                 src="/logo.jpeg" 
                 alt="SHIVA" 
-                className="w-16 h-16 rounded-lg object-cover shadow-glow-purple-sm"
+                className="w-12 h-12 rounded-lg object-cover shadow-glow-purple-sm"
               />
               <h1 className="font-title text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-highlight to-purple-primary bg-clip-text text-transparent">
                 SHIVA
@@ -54,7 +54,7 @@ export default function Layout() {
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-1 ml-auto">
+            <nav className="hidden md:flex space-x-2 ml-auto pl-8">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href || 
                   (item.href !== '/' && location.pathname.startsWith(item.href));
