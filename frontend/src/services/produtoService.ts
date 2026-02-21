@@ -2,10 +2,11 @@ import api from './api';
 import { Produto } from '@/types';
 
 export const produtoService = {
-  async getAll(filtros?: { ativo?: boolean; categoria?: string }) {
+  async getAll(filtros?: { ativo?: boolean; categoria?: string; controlaEstoque?: boolean }) {
     const params = new URLSearchParams();
     if (filtros?.ativo !== undefined) params.append('ativo', String(filtros.ativo));
     if (filtros?.categoria) params.append('categoria', filtros.categoria);
+    if (filtros?.controlaEstoque !== undefined) params.append('controlaEstoque', String(filtros.controlaEstoque));
     
     const { data } = await api.get<Produto[]>(`/produtos?${params}`);
     return data;

@@ -9,6 +9,7 @@ export interface Produto {
   precoVenda: number;
   imagemUrl?: string;
   markup?: number;
+  controlaEstoque?: boolean;
   ativo: boolean;
   criadoEm: string;
   atualizadoEm: string;

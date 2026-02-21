@@ -39,12 +39,13 @@ const upload = multer({
 // GET - Listar todos os produtos
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { ativo, categoria } = req.query;
+    const { ativo, categoria, controlaEstoque } = req.query;
     
     const produtos = await prisma.produto.findMany({
       where: {
         ...(ativo !== undefined && { ativo: ativo === 'true' }),
-        ...(categoria && { categoria: String(categoria) })
+        ...(categoria && { categoria: String(categoria) }),
+        ...(controlaEstoque !== undefined && { controlaEstoque: controlaEstoque === 'true' })
       },
       include: { estoque: true },
       orderBy: { nome: 'asc' }
@@ -85,7 +86,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST - Criar produto
 router.post('/', upload.single('imagem'), async (req: Request, res: Response) => {
   try {
-    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup } = req.body;
+    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, controlaEstoque } = req.body;
     
     // Validações
     if (!nome || !precoVenda) {
@@ -114,6 +115,7 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
         custoMedio: custoMedio ? parseFloat(custoMedio) : 0,
         precoVenda: precoFinal,
         markup: markup ? parseFloat(markup) : 0,
+        controlaEstoque: controlaEstoque === 'true' || controlaEstoque === true,
         imagemUrl,
         estoque: {
           create: {
@@ -134,7 +136,7 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
 router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, ativo } = req.body;
+    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, ativo, controlaEstoque } = req.body;
     
     const produtoExistente = await prisma.produto.findUnique({ where: { id } });
     if (!produtoExistente) {
@@ -163,6 +165,7 @@ router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) 
         ...(precoVenda !== undefined && { precoVenda: parseFloat(precoVenda) }),
         ...(markup !== undefined && { markup: parseFloat(markup) }),
         ...(ativo !== undefined && { ativo: ativo === 'true' }),
+        ...(controlaEstoque !== undefined && { controlaEstoque: controlaEstoque === 'true' || controlaEstoque === true }),
         ...(imagemUrl && { imagemUrl })
       },
       include: { estoque: true }

@@ -23,6 +23,7 @@ export default function ProdutoForm() {
     custoMedio: '',
     precoVenda: '',
     markup: '100',
+    controlaEstoque: true,
   });
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function ProdutoForm() {
         custoMedio: produto.custoMedio.toString(),
         precoVenda: produto.precoVenda.toString(),
         markup: produto.markup?.toString() || '100',
+        controlaEstoque: produto.controlaEstoque !== undefined ? produto.controlaEstoque : true,
       });
       if (produto.imagemUrl) {
         setPreviewImage(produto.imagemUrl);
@@ -105,6 +107,7 @@ export default function ProdutoForm() {
       data.append('custoMedio', formData.custoMedio || '0');
       data.append('precoVenda', formData.precoVenda);
       data.append('markup', formData.markup || '0');
+      data.append('controlaEstoque', String(formData.controlaEstoque));
 
       if (imageFile) {
         data.append('imagem', imageFile);
@@ -278,6 +281,21 @@ export default function ProdutoForm() {
               className="input w-full"
               placeholder="Ex: 7894900011517"
             />
+          </div>
+
+          <div>
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.controlaEstoque}
+                onChange={(e) => setFormData({ ...formData, controlaEstoque: e.target.checked })}
+                className="w-5 h-5 rounded border-purple-primary/30 bg-background-primary text-purple-primary focus:ring-purple-primary focus:ring-2"
+              />
+              <div>
+                <span className="text-sm font-medium text-text-primary block">Controla Estoque</span>
+                <span className="text-xs text-text-secondary">Quando ativo, o produto aparecerá na tela de Movimento de Estoque</span>
+              </div>
+            </label>
           </div>
         </div>
 

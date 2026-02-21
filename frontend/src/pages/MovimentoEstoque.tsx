@@ -23,7 +23,7 @@ export default function MovimentoEstoque() {
 
   const loadProdutos = async () => {
     try {
-      const data = await produtoService.getAll({ ativo: true });
+      const data = await produtoService.getAll({ ativo: true, controlaEstoque: true });
       setProdutos(data);
     } catch (error) {
       console.error('Erro ao buscar produtos:', error);
