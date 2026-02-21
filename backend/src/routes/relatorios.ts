@@ -3,6 +3,70 @@ import prisma from '../lib/prisma';
 
 const router = Router();
 
+// GET - Dashboard geral (comandas abertas do dia)
+router.get('/inicio', async (req: Request, res: Response) => {
+  try {
+    const hoje = new Date();
+    const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 0, 0, 0);
+    const fimHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59);
+
+    // Comandas abertas
+    const comandas = await prisma.comanda.findMany({
+      where: {
+        status: 'ABERTA',
+        dataAbertura: {
+          gte: inicioHoje,
+          lte: fimHoje
+        }
+      },
+      include: {
+        itens: {
+          include: {
+            produto: true
+          }
+        }
+      }
+    });
+
+    const totalComandas = comandas.length;
+    const faturamentoTotal = comandas.reduce((acc, c) => acc + c.total, 0);
+    const ticketMedio = totalComandas > 0 ? faturamentoTotal / totalComandas : 0;
+
+    // Produtos mais vendidos hoje
+    const produtosVendidos: { [key: string]: { nome: string; quantidade: number; total: number } } = {};
+
+    comandas.forEach(comanda => {
+      comanda.itens.forEach(item => {
+        if (!produtosVendidos[item.produtoId]) {
+          produtosVendidos[item.produtoId] = {
+            nome: item.nomeProduto,
+            quantidade: 0,
+            total: 0
+          };
+        }
+        produtosVendidos[item.produtoId].quantidade += item.quantidade;
+        produtosVendidos[item.produtoId].total += item.subtotal;
+      });
+    });
+
+    const topProdutos = Object.entries(produtosVendidos)
+      .map(([id, data]) => ({ produtoId: id, ...data }))
+      .sort((a, b) => b.quantidade - a.quantidade)
+      .slice(0, 10);
+
+    res.json({
+      resumo: {
+        totalComandas,
+        faturamentoTotal: parseFloat(faturamentoTotal.toFixed(2)),
+        ticketMedio: parseFloat(ticketMedio.toFixed(2))
+      },
+      topProdutos
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao gerar início' });
+  }
+});
+
 // GET - Dashboard geral
 router.get('/dashboard', async (req: Request, res: Response) => {
   try {

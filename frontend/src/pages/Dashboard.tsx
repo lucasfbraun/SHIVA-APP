@@ -16,10 +16,10 @@ export default function Dashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true);
-      const result = await relatorioService.getDashboard();
+      const result = await relatorioService.getInicio();
       setData(result);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao carregar dashboard');
+      setError(err.response?.data?.error || 'Erro ao carregar início');
     } finally {
       setLoading(false);
     }
@@ -45,17 +45,16 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="title">Dashboard</h1>
-        <p className="text-text-secondary mt-2">Visão geral do seu negócio</p>
+        <h1 className="title">Início</h1>
       </div>
 
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Total Comandas */}
+        {/* Comandas em Aberto */}
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-text-secondary text-sm font-medium">Total Comandas</p>
+              <p className="text-text-secondary text-sm font-medium">Comanda em Aberto Hoje</p>
               <p className="text-3xl font-bold text-text-primary mt-2">
                 {data?.resumo.totalComandas || 0}
               </p>
@@ -66,11 +65,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Faturamento Total */}
+        {/* Previsão de Faturamento */}
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-text-secondary text-sm font-medium">Faturamento</p>
+              <p className="text-text-secondary text-sm font-medium">Previsão de Faturamento</p>
               <p className="text-3xl font-bold text-text-primary mt-2">
                 R$ {data?.resumo.faturamentoTotal.toFixed(2) || '0.00'}
               </p>
@@ -81,11 +80,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Ticket Médio */}
+        {/* Ticket Médio em Aberto */}
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-text-secondary text-sm font-medium">Ticket Médio</p>
+              <p className="text-text-secondary text-sm font-medium">Ticket Médio em Aberto</p>
               <p className="text-3xl font-bold text-text-primary mt-2">
                 R$ {data?.resumo.ticketMedio.toFixed(2) || '0.00'}
               </p>

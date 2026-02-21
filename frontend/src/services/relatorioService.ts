@@ -11,6 +11,11 @@ export const relatorioService = {
     return data;
   },
 
+  async getInicio() {
+    const { data } = await api.get(`/relatorios/inicio`);
+    return data;
+  },
+
   async getTicketMedio(dataInicio?: string, dataFim?: string) {
     const params = new URLSearchParams();
     if (dataInicio) params.append('dataInicio', dataInicio);
