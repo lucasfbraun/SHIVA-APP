@@ -128,4 +128,45 @@ router.get('/alerta/baixo', async (req: Request, res: Response) => {
   }
 });
 
+// PUT - Editar estoque manualmente (sem nota/cupom)
+router.put('/manual/:produtoId', async (req: Request, res: Response) => {
+  try {
+    const { produtoId } = req.params;
+    const { quantidadeEstoque } = req.body;
+
+    if (quantidadeEstoque === undefined || quantidadeEstoque === null) {
+      return res.status(400).json({ error: 'Quantidade é obrigatória' });
+    }
+
+    const qtd = parseFloat(quantidadeEstoque);
+
+    if (qtd < 0) {
+      return res.status(400).json({ error: 'Quantidade não pode ser negativa' });
+    }
+
+    // Atualizar produto e estoque
+    const resultado = await prisma.$transaction(async (tx) => {
+      // Atualizar estoque
+      const estoque = await tx.estoque.upsert({
+        where: { produtoId },
+        update: { quantidade: qtd },
+        create: { produtoId, quantidade: qtd }
+      });
+
+      // Buscar produto atualizado com estoque
+      const produto = await tx.produto.findUnique({
+        where: { id: produtoId },
+        include: { estoque: true }
+      });
+
+      return produto;
+    });
+
+    res.json(resultado);
+  } catch (error: any) {
+    console.error('Erro ao atualizar estoque:', error);
+    res.status(500).json({ error: error.message || 'Erro ao atualizar estoque' });
+  }
+});
+
 export default router;

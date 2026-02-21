@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, PackagePlus, PenLine } from 'lucide-react';
 import { produtoService } from '@/services/produtoService';
 import { Produto } from '@/types';
 
@@ -9,6 +9,13 @@ export default function Produtos() {
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
   const [filtroAtivo, setFiltroAtivo] = useState<boolean | undefined>(true);
+  const [modalEntrada, setModalEntrada] = useState(false);
+  const [modalEditarEstoque, setModalEditarEstoque] = useState(false);
+  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
+  const [quantidade, setQuantidade] = useState('');
+  const [custoUnitario, setCustoUnitario] = useState('');
+  const [novoEstoque, setNovoEstoque] = useState('');
+  const [processando, setProcessando] = useState(false);
 
   useEffect(() => {
     loadProdutos();
@@ -38,10 +45,88 @@ export default function Produtos() {
     }
   };
 
-  const produtosFiltrados = produtos.filter(p =>
-    p.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    p.categoria?.toLowerCase().includes(busca.toLowerCase())
-  );
+  const abrirModalEntrada = (produto: Produto) => {
+    setProdutoSelecionado(produto);
+    setCustoUnitario(produto.custoMedio.toString());
+    setQuantidade('');
+    setModalEntrada(true);
+  };
+
+  const abrirModalEditarEstoque = (produto: Produto) => {
+    setProdutoSelecionado(produto);
+    setNovoEstoque((produto.estoque?.quantidade || 0).toString());
+    setModalEditarEstoque(true);
+  };
+
+  const handleEntradaEstoque = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!produtoSelecionado || !quantidade || !custoUnitario) {
+      alert('Preencha quantidade e custo unitário');
+      return;
+    }
+
+    try {
+      setProcessando(true);
+      
+      await fetch('/api/estoque/entrada', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          produtoId: produtoSelecionado.id,
+          quantidade: parseFloat(quantidade),
+          custoUnitario: parseFloat(custoUnitario),
+        })
+      });
+
+      setModalEntrada(false);
+      setProdutoSelecionado(null);
+      setQuantidade('');
+      setCustoUnitario('');
+      loadProdutos();
+    } catch (error) {
+      console.error('Erro ao dar entrada:', error);
+      alert('Erro ao dar entrada no estoque');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const handleEditarEstoque = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!produtoSelecionado || novoEstoque === '') {
+      alert('Informe a quantidade em estoque');
+      return;
+    }
+
+    try {
+      setProcessando(true);
+      
+      await fetch(`/api/estoque/manual/${produtoSelecionado.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quantidadeEstoque: parseFloat(novoEstoque),
+        })
+      });
+
+      setModalEditarEstoque(false);
+      setProdutoSelecionado(null);
+      setNovoEstoque('');
+      loadProdutos();
+    } catch (error) {
+      console.error('Erro ao editar estoque:', error);
+      alert('Erro ao editar estoque');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const produtosFiltrados = produtos.filter((produto) => {
+    return produto.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      produto.categoria?.toLowerCase().includes(busca.toLowerCase());
+  });
 
   return (
     <div className="space-y-6">
@@ -159,16 +244,29 @@ export default function Produtos() {
 
                 {/* Ações */}
                 <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => abrirModalEntrada(produto)}
+                    className="flex-1 btn-secondary py-2 text-sm flex items-center justify-center space-x-1 hover:bg-purple-primary/10"
+                  >
+                    <PackagePlus size={16} />
+                    <span>Entrada</span>
+                  </button>
+                  <button
+                    onClick={() => abrirModalEditarEstoque(produto)}
+                    className="btn-secondary py-2 px-3 text-sm flex items-center justify-center hover:bg-purple-primary/10"
+                    title="Editar estoque manualmente"
+                  >
+                    <PenLine size={16} />
+                  </button>
                   <Link
                     to={`/produtos/editar/${produto.id}`}
-                    className="flex-1 btn-secondary py-2 text-sm flex items-center justify-center space-x-1"
+                    className="btn-secondary py-2 px-3 text-sm flex items-center justify-center"
                   >
                     <Edit size={16} />
-                    <span>Editar</span>
                   </Link>
                   <button
                     onClick={() => handleDelete(produto.id)}
-                    className="btn-secondary py-2 px-4 text-sm hover:bg-red-action/10 hover:border-red-action"
+                    className="btn-secondary py-2 px-3 text-sm hover:bg-red-action/10 hover:border-red-action"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -176,6 +274,133 @@ export default function Produtos() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal Entrada de Estoque */}
+      {modalEntrada && produtoSelecionado && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-background-secondary border border-purple-primary/30 rounded-2xl p-6 max-w-md w-full shadow-glow-purple">
+            <h2 className="text-xl font-semibold text-text-primary mb-4">
+              Entrada de Estoque
+            </h2>
+            <p className="text-text-secondary mb-4">{produtoSelecionado.nome}</p>
+            
+            <form onSubmit={handleEntradaEstoque} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Quantidade *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(e.target.value)}
+                  className="input w-full"
+                  placeholder="Ex: 10"
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Custo Unitário (R$) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={custoUnitario}
+                  onChange={(e) => setCustoUnitario(e.target.value)}
+                  className="input w-full"
+                  placeholder="Ex: 3.50"
+                  required
+                />
+                <p className="text-xs text-text-secondary mt-1">
+                  Custo médio atual: R$ {produtoSelecionado.custoMedio.toFixed(2)}
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalEntrada(false);
+                    setProdutoSelecionado(null);
+                  }}
+                  className="btn-secondary flex-1"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={processando}
+                  className="btn-primary flex-1 disabled:opacity-50"
+                >
+                  {processando ? 'Processando...' : 'Confirmar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Estoque Manualmente */}
+      {modalEditarEstoque && produtoSelecionado && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-background-secondary border border-purple-primary/30 rounded-2xl p-6 max-w-md w-full shadow-glow-purple">
+            <h2 className="text-xl font-semibold text-text-primary mb-4">
+              Editar Estoque Manualmente
+            </h2>
+            <p className="text-text-secondary mb-2">{produtoSelecionado.nome}</p>
+            <p className="text-sm text-text-secondary/70 mb-4">
+              (sem cupom/nota - não altera custo médio)
+            </p>
+            
+            <form onSubmit={handleEditarEstoque} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Quantidade em Estoque *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={novoEstoque}
+                  onChange={(e) => setNovoEstoque(e.target.value)}
+                  className="input w-full"
+                  placeholder="Ex: 15"
+                  autoFocus
+                  required
+                />
+                <p className="text-xs text-text-secondary mt-1">
+                  Estoque atual: {(produtoSelecionado.estoque?.quantidade || 0).toFixed(2)}
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalEditarEstoque(false);
+                    setProdutoSelecionado(null);
+                  }}
+                  className="btn-secondary flex-1"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={processando}
+                  className="btn-primary flex-1 disabled:opacity-50"
+                >
+                  {processando ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
