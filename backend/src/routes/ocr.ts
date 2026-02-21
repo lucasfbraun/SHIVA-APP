@@ -152,7 +152,7 @@ router.post('/processar-cupom', upload.single('cupom'), async (req: Request, res
 // POST - Confirmar itens do OCR e dar entrada no estoque
 router.post('/confirmar-entrada', async (req: Request, res: Response) => {
   try {
-    const { ocrId, itens } = req.body;
+    const { ocrId, itens, dataEntrada, numeroCupom } = req.body;
     
     if (!ocrId || !Array.isArray(itens) || itens.length === 0) {
       return res.status(400).json({ error: 'ID do OCR e itens são obrigatórios' });
@@ -204,6 +204,9 @@ router.post('/confirmar-entrada', async (req: Request, res: Response) => {
               produtoId,
               quantidade: qtd,
               custoUnitario: custo,
+              dataEntrada: dataEntrada ? new Date(dataEntrada) : new Date(),
+              numeroCupom: numeroCupom || null,
+              tipoEntrada: 'OCR',
               observacao: `Entrada via OCR - Cupom ID: ${ocrId}`
             }
           });

@@ -41,5 +41,17 @@ export const produtoService = {
       markup
     });
     return data;
+  },
+
+  async registrarEntradaEstoque(entrada: {
+    produtoId: string;
+    quantidade: number;
+    custoUnitario: number;
+    dataEntrada?: string;
+    numeroCupom?: string;
+    observacao?: string;
+  }) {
+    const { data } = await api.post('/estoque/entrada', entrada);
+    return data;
   }
 };

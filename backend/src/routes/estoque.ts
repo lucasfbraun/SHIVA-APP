@@ -6,7 +6,7 @@ const router = Router();
 // POST - Entrada de estoque (atualiza quantidade e custo médio)
 router.post('/entrada', async (req: Request, res: Response) => {
   try {
-    const { produtoId, quantidade, custoUnitario, observacao } = req.body;
+    const { produtoId, quantidade, custoUnitario, dataEntrada, numeroCupom, observacao } = req.body;
     
     if (!produtoId || !quantidade || !custoUnitario) {
       return res.status(400).json({ error: 'Produto, quantidade e custo são obrigatórios' });
@@ -45,6 +45,9 @@ router.post('/entrada', async (req: Request, res: Response) => {
           produtoId,
           quantidade: qtd,
           custoUnitario: custo,
+          dataEntrada: dataEntrada ? new Date(dataEntrada) : new Date(),
+          numeroCupom: numeroCupom || null,
+          tipoEntrada: 'MANUAL',
           observacao
         }
       });
@@ -166,6 +169,54 @@ router.put('/manual/:produtoId', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Erro ao atualizar estoque:', error);
     res.status(500).json({ error: error.message || 'Erro ao atualizar estoque' });
+  }
+});
+
+// GET - Listar todas as entradas de estoque (com filtros)
+router.get('/entradas', async (req: Request, res: Response) => {
+  try {
+    const { produtoId, tipoEntrada, dataInicio, dataFim } = req.query;
+    
+    const where: any = {};
+    
+    if (produtoId) {
+      where.produtoId = String(produtoId);
+    }
+    
+    if (tipoEntrada) {
+      where.tipoEntrada = String(tipoEntrada).toUpperCase();
+    }
+    
+    if (dataInicio || dataFim) {
+      where.dataEntrada = {};
+      if (dataInicio) {
+        where.dataEntrada.gte = new Date(String(dataInicio));
+      }
+      if (dataFim) {
+        where.dataEntrada.lte = new Date(String(dataFim));
+      }
+    }
+    
+    const entradas = await prisma.entradaEstoque.findMany({
+      where,
+      include: {
+        produto: {
+          select: {
+            id: true,
+            nome: true,
+            categoria: true,
+            codigoInterno: true,
+            codigoBarras: true
+          }
+        }
+      },
+      orderBy: { dataEntrada: 'desc' }
+    });
+    
+    res.json(entradas);
+  } catch (error: any) {
+    console.error('Erro ao buscar entradas:', error);
+    res.status(500).json({ error: error.message || 'Erro ao buscar entradas de estoque' });
   }
 });
 

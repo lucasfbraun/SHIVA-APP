@@ -57,6 +57,9 @@ model EntradaEstoque {
   produtoId       String
   quantidade      Float
   custoUnitario   Float
+  dataEntrada     DateTime
+  numeroCupom     String?
+  tipoEntrada     String   @default("MANUAL") // MANUAL, OCR
   observacao      String?
   criadoEm        DateTime @default(now())
 

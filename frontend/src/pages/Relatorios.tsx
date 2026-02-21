@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter } from 'lucide-react';
 import { relatorioService } from '@/services/relatorioService';
 import { despesaService } from '@/services/despesaService';
+import { estoqueService, EntradaEstoque } from '@/services/estoqueService';
 import { GraficoFaturamentoVsDespesasVsLucro, GraficoMargensBrutaVsLiquida } from '@/components/GraficosRelatorio';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default function Relatorios() {
-  const [abaSelecionada, setAbaSelecionada] = useState<'vendas' | 'despesas'>('vendas');
+  const [abaSelecionada, setAbaSelecionada] = useState<'vendas' | 'despesas' | 'estoque'>('vendas');
   const [loading, setLoading] = useState(true);
   
   // Vendas
@@ -23,13 +26,21 @@ export default function Relatorios() {
   const [ano, setAno] = useState(new Date().getFullYear());
   const [resumoDespesas, setResumoDespesas] = useState<any>(null);
 
+  // Estoque
+  const [entradas, setEntradas] = useState<EntradaEstoque[]>([]);
+  const [filtroTipo, setFiltroTipo] = useState<'TODOS' | 'MANUAL' | 'OCR'>('TODOS');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+
   useEffect(() => {
     if (abaSelecionada === 'vendas') {
       loadRelatorioVendas();
-    } else {
+    } else if (abaSelecionada === 'despesas') {
       loadRelatorioDespesas();
+    } else if (abaSelecionada === 'estoque') {
+      loadRelatorioEstoque();
     }
-  }, [abaSelecionada, mesVendas, anoVendas, mes, ano]);
+  }, [abaSelecionada, mesVendas, anoVendas, mes, ano, filtroTipo, dataInicio, dataFim]);
 
   const loadRelatorioVendas = async () => {
     try {
@@ -103,6 +114,32 @@ export default function Relatorios() {
     }
   };
 
+  const loadRelatorioEstoque = async () => {
+    try {
+      setLoading(true);
+      const filtros: any = {};
+      
+      if (filtroTipo !== 'TODOS') {
+        filtros.tipoEntrada = filtroTipo;
+      }
+      
+      if (dataInicio) {
+        filtros.dataInicio = dataInicio;
+      }
+      
+      if (dataFim) {
+        filtros.dataFim = dataFim;
+      }
+      
+      const data = await estoqueService.getEntradas(filtros);
+      setEntradas(data);
+    } catch (error) {
+      console.error('Erro ao buscar entradas:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getMesNome = (m: number) => {
     return new Date(2024, m - 1).toLocaleString('pt-BR', { month: 'long' });
   };
@@ -158,6 +195,23 @@ export default function Relatorios() {
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-primary to-purple-highlight rounded-t"></div>
           )}
         </button>
+
+        <button
+          onClick={() => setAbaSelecionada('estoque')}
+          className={`px-4 py-3 font-medium transition relative ${
+            abaSelecionada === 'estoque'
+              ? 'text-purple-primary'
+              : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Package size={18} />
+            Movimento Estoque
+          </div>
+          {abaSelecionada === 'estoque' && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-primary to-purple-highlight rounded-t"></div>
+          )}
+        </button>
       </div>
 
       {/* Conteúdo das Abas */}
@@ -175,7 +229,7 @@ export default function Relatorios() {
           dadosMensais={dadosMensais}
           getMesNome={getMesNome}
         />
-      ) : (
+      ) : abaSelecionada === 'despesas' ? (
         <RelatorioDespesasContent
           mes={mes}
           setMes={setMes}
@@ -183,6 +237,16 @@ export default function Relatorios() {
           setAno={setAno}
           resumoDespesas={resumoDespesas}
           getMesNome={getMesNome}
+        />
+      ) : (
+        <RelatorioEstoqueContent
+          entradas={entradas}
+          filtroTipo={filtroTipo}
+          setFiltroTipo={setFiltroTipo}
+          dataInicio={dataInicio}
+          setDataInicio={setDataInicio}
+          dataFim={dataFim}
+          setDataFim={setDataFim}
         />
       )}
     </div>
@@ -434,6 +498,208 @@ function RelatorioDespesasContent({ mes, setMes, ano, setAno, resumoDespesas, ge
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Componente de Relatório de Estoque
+function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInicio, setDataInicio, dataFim, setDataFim }: any) {
+  const entradasManuais = entradas.filter((e: EntradaEstoque) => e.tipoEntrada === 'MANUAL');
+  const entradasOCR = entradas.filter((e: EntradaEstoque) => e.tipoEntrada === 'OCR');
+  
+  const totalQuantidade = entradas.reduce((acc: number, e: EntradaEstoque) => acc + e.quantidade, 0);
+  const totalValor = entradas.reduce((acc: number, e: EntradaEstoque) => acc + (e.quantidade * e.custoUnitario), 0);
+
+  const limparFiltros = () => {
+    setFiltroTipo('TODOS');
+    setDataInicio('');
+    setDataFim('');
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Filtros */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter size={20} className="text-purple-primary" />
+          <h2 className="font-semibold text-text-primary">Filtros</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Tipo de Entrada */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Tipo de Entrada
+            </label>
+            <select
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value as any)}
+              className="input py-2 px-3 text-sm w-full"
+            >
+              <option value="TODOS">Todos</option>
+              <option value="MANUAL">Movimento Manual</option>
+              <option value="OCR">OCR Cupom</option>
+            </select>
+          </div>
+
+          {/* Data Início */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Data Início
+            </label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="input py-2 px-3 text-sm w-full"
+            />
+          </div>
+
+          {/* Data Fim */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Data Fim
+            </label>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="input py-2 px-3 text-sm w-full"
+            />
+          </div>
+
+          {/* Botão Limpar */}
+          <div className="flex items-end">
+            <button
+              onClick={limparFiltros}
+              className="btn-secondary w-full"
+            >
+              Limpar Filtros
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Cards de Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="card shadow-lg hover:shadow-xl hover:shadow-purple-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Total de Entradas</span>
+            <TrendingUp className="text-purple-primary" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-text-primary">{entradas.length}</div>
+        </div>
+
+        <div className="card shadow-lg hover:shadow-xl hover:shadow-blue-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Movimento Manual</span>
+            <Package className="text-blue-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-blue-500">{entradasManuais.length}</div>
+        </div>
+
+        <div className="card shadow-lg hover:shadow-xl hover:shadow-green-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Via OCR Cupom</span>
+            <FileText className="text-green-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-green-500">{entradasOCR.length}</div>
+        </div>
+
+        <div className="card shadow-lg hover:shadow-xl hover:shadow-purple-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Valor Total</span>
+            <DollarSign className="text-purple-primary" size={20} />
+          </div>
+          <div className="text-2xl font-bold text-purple-primary">R$ {totalValor.toFixed(2)}</div>
+        </div>
+      </div>
+
+      {/* Tabela de Entradas */}
+      <div className="card overflow-hidden">
+        <h2 className="font-semibold text-text-primary mb-4">
+          Histórico de Entradas ({entradas.length})
+        </h2>
+
+        {entradas.length === 0 ? (
+          <div className="text-center py-8 text-text-secondary">
+            Nenhuma entrada encontrada
+          </div>
+        ) : (
+          <div className="overflow-x-auto -mx-6 px-6">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-purple-primary/30">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Data</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Produto</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Qtd</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Custo Unit.</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Total</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Tipo</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Nº Cupom</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Observação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entradas.map((entrada: EntradaEstoque) => (
+                  <tr key={entrada.id} className="border-b border-purple-primary/10 hover:bg-purple-primary/5">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-text-secondary" />
+                        <span className="text-sm text-text-primary">
+                          {format(new Date(entrada.dataEntrada), 'dd/MM/yyyy', { locale: ptBR })}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div>
+                        <div className="text-sm font-medium text-text-primary">{entrada.produto.nome}</div>
+                        {entrada.produto.codigoInterno && (
+                          <div className="text-xs text-text-secondary">Cód: {entrada.produto.codigoInterno}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">{entrada.quantidade}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">R$ {entrada.custoUnitario.toFixed(2)}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm font-medium text-text-primary">
+                        R$ {(entrada.quantidade * entrada.custoUnitario).toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      {entrada.tipoEntrada === 'MANUAL' ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-500">
+                          <Package size={12} className="mr-1" />
+                          Manual
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500">
+                          <FileText size={12} className="mr-1" />
+                          OCR
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-secondary">
+                        {entrada.numeroCupom || '-'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs text-text-secondary truncate max-w-xs block">
+                        {entrada.observacao || '-'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

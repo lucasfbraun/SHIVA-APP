@@ -9,7 +9,8 @@ import {
   X,
   LogOut,
   DollarSign,
-  Users
+  Users,
+  TrendingUp
 } from 'lucide-react';
 import { useState } from 'react';
 import { authService } from '@/services/authService';
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Clientes', href: '/clientes', icon: Users },
   { name: 'Despesas', href: '/despesas', icon: DollarSign },
   { name: 'Relatórios', href: '/relatorios', icon: BarChart3 },
+  { name: 'Movimento Estoque', href: '/estoque', icon: TrendingUp },
   { name: 'OCR Cupom', href: '/ocr', icon: Camera },
 ];
 
