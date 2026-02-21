@@ -80,7 +80,7 @@ export default function Layout() {
             </nav>
 
             {/* Mobile menu button and logout */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 ml-8">
               <div className="hidden sm:flex items-center gap-2 text-text-secondary text-sm">
                 <span>{usuario?.nome}</span>
               </div>
