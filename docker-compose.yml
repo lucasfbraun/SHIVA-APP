@@ -1,0 +1,40 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shiva-backend
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/dev.db:/app/dev.db
+      - ./backend/uploads:/app/uploads
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:./dev.db
+    command: sh -c "npx prisma migrate deploy && npm run dev"
+    networks:
+      - shiva-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shiva-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    depends_on:
+      - backend
+    networks:
+      - shiva-network
+
+networks:
+  shiva-network:
+    driver: bridge

@@ -13,7 +13,7 @@ router.post('/entrada', async (req: Request, res: Response) => {
     }
     
     const qtd = parseFloat(quantidade);
-    const custo = parseFloat(custoUnitario);
+    const custo = parseFloat(custoUnitario); 
     
     if (qtd <= 0 || custo < 0) {
       return res.status(400).json({ error: 'Quantidade e custo devem ser positivos' });
