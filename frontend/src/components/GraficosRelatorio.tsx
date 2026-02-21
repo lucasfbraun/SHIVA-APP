@@ -1,9 +1,12 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 export function GraficoFaturamentoVsDespesasVsLucro({ dados }: { dados: any[] }) {
-  console.log('Dados do gráfico 1:', dados);
+  console.log('📊 GraficoFaturamento renderizando');
+  console.log('📊 dados recebidos:', dados);
+  console.log('📊 dados.length:', dados?.length);
   
   if (!dados || dados.length === 0) {
+    console.log('⚠️ Sem dados para exibir no gráfico 1');
     return (
       <div className="card flex flex-col items-center justify-center h-80 space-y-2">
         <p className="text-text-secondary text-center">Sem dados para exibir</p>
@@ -11,6 +14,8 @@ export function GraficoFaturamentoVsDespesasVsLucro({ dados }: { dados: any[] })
       </div>
     );
   }
+
+  console.log('✅ Renderizando gráfico 1 com', dados.length, 'meses');
 
   return (
     <div className="card">
@@ -58,9 +63,12 @@ export function GraficoFaturamentoVsDespesasVsLucro({ dados }: { dados: any[] })
 }
 
 export function GraficoMargensBrutaVsLiquida({ dados }: { dados: any[] }) {
-  console.log('Dados do gráfico 2:', dados);
+  console.log('📈 GraficoMargens renderizando');
+  console.log('📈 dados recebidos:', dados);
+  console.log('📈 dados.length:', dados?.length);
   
   if (!dados || dados.length === 0) {
+    console.log('⚠️ Sem dados para exibir no gráfico 2');
     return (
       <div className="card flex flex-col items-center justify-center h-80 space-y-2">
         <p className="text-text-secondary text-center">Sem dados para exibir</p>

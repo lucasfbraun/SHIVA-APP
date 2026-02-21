@@ -33,10 +33,15 @@ export default function Relatorios() {
   const loadRelatorioVendas = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Iniciando loadRelatorioVendas...');
       
       const hoje = new Date();
       const dataInicio = new Date();
       dataInicio.setDate(hoje.getDate() - parseInt(periodo));
+
+      console.log('Período selecionado:', periodo);
+      console.log('Data início:', dataInicio.toISOString());
+      console.log('Data fim:', hoje.toISOString());
 
       const [ticketData, produtosData, margemData, clientesData, resumoData, dadosMensaisData] = await Promise.all([
         relatorioService.getTicketMedio(dataInicio.toISOString(), hoje.toISOString()),
@@ -46,6 +51,10 @@ export default function Relatorios() {
         relatorioService.getResumo(dataInicio.toISOString(), hoje.toISOString()),
         relatorioService.getMensal(12)
       ]);
+
+      console.log('✅ Todos os endpoints retornados');
+      console.log('resumoData:', resumoData);
+      console.log('dadosMensaisData:', dadosMensaisData);
 
       // Extrair o valor de ticketMedio do objeto retornado
       setTicketMedio(ticketData?.ticketMedio || 0);
@@ -60,8 +69,10 @@ export default function Relatorios() {
       // Resumo completo
       setResumo(resumoData);
       // Dados mensais
-      console.log('Dados mensais recebidos:', dadosMensaisData);
+      console.log('📊 Dados mensais recebidos:', dadosMensaisData);
       const meses = Array.isArray(dadosMensaisData) ? dadosMensaisData : [];
+      console.log('📊 Meses processados:', meses);
+      console.log('📊 Quantidade de meses:', meses.length);
       setDadosMensais(meses);
     } catch (error) {
       console.error('Erro ao carregar relatórios:', error);
@@ -155,6 +166,7 @@ export default function Relatorios() {
           topClientes={topClientes}
           margemLucro={margemLucro}
           resumo={resumo}
+          dadosMensais={dadosMensais}
         />
       ) : (
         <RelatorioDespesasContent
@@ -172,6 +184,11 @@ export default function Relatorios() {
 
 // Componente de Relatório de Vendas
 function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topClientes, margemLucro, resumo, dadosMensais }: any) {
+  console.log('📋 RelatorioVendas renderizando');
+  console.log('📋 dadosMensais prop:', dadosMensais);
+  console.log('📋 Tipo de dadosMensais:', typeof dadosMensais);
+  console.log('📋 É array?:', Array.isArray(dadosMensais));
+  console.log('📋 Comprimento:', dadosMensais?.length);
   return (
     <div className="space-y-6">
       {/* Período Selection */}

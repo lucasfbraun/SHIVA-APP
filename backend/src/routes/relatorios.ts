@@ -160,8 +160,16 @@ router.get('/resumo', async (req: Request, res: Response) => {
     const { dataInicio, dataFim } = req.query;
 
     const filtroData: any = {};
-    if (dataInicio) filtroData.gte = new Date(String(dataInicio));
-    if (dataFim) filtroData.lte = new Date(String(dataFim));
+    if (dataInicio) {
+      const inicio = new Date(String(dataInicio));
+      inicio.setHours(0, 0, 0, 0);
+      filtroData.gte = inicio;
+    }
+    if (dataFim) {
+      const fim = new Date(String(dataFim));
+      fim.setHours(23, 59, 59, 999);
+      filtroData.lte = fim;
+    }
 
     const whereClause: any = { status: 'FECHADA' };
     if (Object.keys(filtroData).length > 0) {
@@ -190,79 +198,17 @@ router.get('/resumo', async (req: Request, res: Response) => {
     const margemGrossa = faturamentoTotal > 0 ? (lucroGrosso / faturamentoTotal) * 100 : 0;
 
     // Despesas
+    console.log('Buscando despesas com filtro:', { paga: true, data: filtroData });
     const despesasData = await prisma.despesa.findMany({
       where: {
-        status: 'PAGO',
+        paga: true,
         ...(Object.keys(filtroData).length > 0 && {
-          dataPagamento: filtroData
+          data: filtroData
         })
       }
     });
-
-    const despesasTotal = despesasData.reduce((acc, d) => acc + d.valor, 0);
-
-    // Lucro líquido (faturamento - custo dos produtos - despesas)
-    const lucroLiquido = faturamentoTotal - custoTotal - despesasTotal;
-    const margemLiquida = faturamentoTotal > 0 ? (lucroLiquido / faturamentoTotal) * 100 : 0;
-
-    res.json({
-      faturamentoTotal: parseFloat(faturamentoTotal.toFixed(2)),
-      custoTotal: parseFloat(custoTotal.toFixed(2)),
-      despesasTotal: parseFloat(despesasTotal.toFixed(2)),
-      lucroGrosso: parseFloat(lucroGrosso.toFixed(2)),
-      margemGrossa: parseFloat(margemGrossa.toFixed(2)),
-      lucroLiquido: parseFloat(lucroLiquido.toFixed(2)),
-      margemLiquida: parseFloat(margemLiquida.toFixed(2))
-    });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Erro ao gerar resumo' });
-  }
-});
-
-// GET - Resumo completo (faturamento, despesas e lucro líquido)
-router.get('/resumo', async (req: Request, res: Response) => {
-  try {
-    const { dataInicio, dataFim } = req.query;
-
-    const filtroData: any = {};
-    if (dataInicio) filtroData.gte = new Date(String(dataInicio));
-    if (dataFim) filtroData.lte = new Date(String(dataFim));
-
-    const whereClause: any = { status: 'FECHADA' };
-    if (Object.keys(filtroData).length > 0) {
-      whereClause.dataFechamento = filtroData;
-    }
-
-    // Faturamento e custo dos produtos
-    const itens = await prisma.itemComanda.findMany({
-      where: { comanda: whereClause },
-      include: {
-        produto: {
-          select: { custoMedio: true }
-        }
-      }
-    });
-
-    let faturamentoTotal = 0;
-    let custoTotal = 0;
-
-    itens.forEach(item => {
-      faturamentoTotal += item.subtotal;
-      custoTotal += item.quantidade * (item.produto.custoMedio || 0);
-    });
-
-    const lucroGrosso = faturamentoTotal - custoTotal;
-    const margemGrossa = faturamentoTotal > 0 ? (lucroGrosso / faturamentoTotal) * 100 : 0;
-
-    // Despesas
-    const despesasData = await prisma.despesa.findMany({
-      where: {
-        status: 'PAGO',
-        ...(Object.keys(filtroData).length > 0 && {
-          dataPagamento: filtroData
-        })
-      }
-    });
+    console.log('Despesas encontradas:', despesasData.length);
+    console.log('Detalhes das despesas:', despesasData);
 
     const despesasTotal = despesasData.reduce((acc, d) => acc + d.valor, 0);
 
@@ -334,8 +280,8 @@ router.get('/mensal', async (req: Request, res: Response) => {
       // Despesas do mês
       const despesasMes = await prisma.despesa.findMany({
         where: {
-          status: 'PAGO',
-          dataPagamento: {
+          paga: true,
+          data: {
             gte: inicioMes,
             lte: fimMes
           }
@@ -349,6 +295,8 @@ router.get('/mensal', async (req: Request, res: Response) => {
       const margemGrossa = faturamentoMes > 0 ? (lucroGrosso / faturamentoMes) * 100 : 0;
       const margemLiquida = faturamentoMes > 0 ? (lucroLiquido / faturamentoMes) * 100 : 0;
 
+      console.log(`[${mesNome}] Fat: ${faturamentoMes}, Custo: ${custoMes}, Desp: ${despesasTotal}, Lucro Liq: ${lucroLiquido}`);
+
       dadosMensais.push({
         mes: mesNome,
         faturamento: parseFloat(faturamentoMes.toFixed(2)),
@@ -360,6 +308,8 @@ router.get('/mensal', async (req: Request, res: Response) => {
       });
     }
 
+    console.log('Dados mensais completos:', dadosMensais);
+    console.log('Quantos meses com dados:', dadosMensais.filter(d => d.faturamento > 0).length);
     res.json(dadosMensais);
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Erro ao gerar dados mensais' });
