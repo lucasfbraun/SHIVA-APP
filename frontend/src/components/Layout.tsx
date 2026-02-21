@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
@@ -6,9 +6,11 @@ import {
   BarChart3, 
   Camera,
   Menu,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { useState } from 'react';
+import { authService } from '@/services/authService';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -20,7 +22,14 @@ const navigation = [
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const usuario = authService.getUsuario();
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background-primary to-background-secondary">
@@ -66,13 +75,25 @@ export default function Layout() {
               })}
             </nav>
 
-            {/* Mobile menu button */}
-            <button
-              className="md:hidden p-2 rounded-lg text-text-primary hover:bg-background-secondary"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            {/* Mobile menu button and logout */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 text-text-secondary text-sm">
+                <span>{usuario?.nome}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg text-text-secondary hover:text-red-action hover:bg-red-action/10 transition"
+                title="Sair"
+              >
+                <LogOut size={20} />
+              </button>
+              <button
+                className="md:hidden p-2 rounded-lg text-text-primary hover:bg-background-secondary"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -103,6 +124,21 @@ export default function Layout() {
                   </Link>
                 );
               })}
+              
+              {/* User info and logout in mobile */}
+              <div className="border-t border-purple-primary/30 pt-4 mt-4">
+                <p className="text-text-secondary text-sm px-4 mb-2">Logado como: <span className="text-purple-primary font-medium">{usuario?.nome}</span></p>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-text-secondary hover:text-red-action hover:bg-red-action/10 transition"
+                >
+                  <LogOut size={20} />
+                  <span className="font-medium">Sair</span>
+                </button>
+              </div>
             </nav>
           </div>
         )}

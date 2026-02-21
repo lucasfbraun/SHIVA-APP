@@ -1,11 +1,13 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import authRouter from './routes/auth';
 import produtosRouter from './routes/produtos';
 import estoqueRouter from './routes/estoque';
 import comandasRouter from './routes/comandas';
 import relatoriosRouter from './routes/relatorios';
 import ocrRouter from './routes/ocr';
+import { authMiddleware } from './lib/authMiddleware';
 
 dotenv.config();
 
@@ -25,11 +27,15 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.use('/api/produtos', produtosRouter);
-app.use('/api/estoque', estoqueRouter);
-app.use('/api/comandas', comandasRouter);
-app.use('/api/relatorios', relatoriosRouter);
-app.use('/api/ocr', ocrRouter);
+// Rotas de autenticação (públicas)
+app.use('/api/auth', authRouter);
+
+// Middleware de autenticação para rotas protegidas
+app.use('/api/produtos', authMiddleware, produtosRouter);
+app.use('/api/estoque', authMiddleware, estoqueRouter);
+app.use('/api/comandas', authMiddleware, comandasRouter);
+app.use('/api/relatorios', authMiddleware, relatoriosRouter);
+app.use('/api/ocr', authMiddleware, ocrRouter);
 
 // Error handler
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

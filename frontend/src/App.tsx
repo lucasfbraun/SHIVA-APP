@@ -1,5 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Produtos from './pages/Produtos';
 import ProdutoForm from './pages/ProdutoForm';
@@ -11,7 +13,11 @@ import OCRCupom from './pages/OCRCupom';
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
+      {/* Rota pública de login */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Rotas protegidas */}
+      <Route path="/" element={<ProtectedRoute element={<Layout />} />}>
         <Route index element={<Dashboard />} />
         <Route path="produtos" element={<Produtos />} />
         <Route path="produtos/novo" element={<ProdutoForm />} />
