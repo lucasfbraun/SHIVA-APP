@@ -42,7 +42,7 @@ export default function Layout() {
         <div className="container-main">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 flex-shrink-0">
               <img 
                 src="/logo.jpeg" 
                 alt="SHIVA" 
@@ -54,7 +54,7 @@ export default function Layout() {
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-1">
+            <nav className="hidden md:flex space-x-1 ml-auto">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href || 
                   (item.href !== '/' && location.pathname.startsWith(item.href));
