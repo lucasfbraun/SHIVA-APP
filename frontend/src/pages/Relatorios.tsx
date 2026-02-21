@@ -9,7 +9,8 @@ export default function Relatorios() {
   const [loading, setLoading] = useState(true);
   
   // Vendas
-  const [periodo, setPeriodo] = useState('30');
+  const [mesVendas, setMesVendas] = useState(new Date().getMonth() + 1);
+  const [anoVendas, setAnoVendas] = useState(new Date().getFullYear());
   const [ticketMedio, setTicketMedio] = useState<any>(null);
   const [topProdutos, setTopProdutos] = useState<any[]>([]);
   const [margemLucro, setMargemLucro] = useState<any>(null);
@@ -28,27 +29,30 @@ export default function Relatorios() {
     } else {
       loadRelatorioDespesas();
     }
-  }, [abaSelecionada, periodo, mes, ano]);
+  }, [abaSelecionada, mesVendas, anoVendas, mes, ano]);
 
   const loadRelatorioVendas = async () => {
     try {
       setLoading(true);
       console.log('🔄 Iniciando loadRelatorioVendas...');
       
-      const hoje = new Date();
-      const dataInicio = new Date();
-      dataInicio.setDate(hoje.getDate() - parseInt(periodo));
+      // Definir início e fim do mês selecionado
+      const dataInicio = new Date(anoVendas, mesVendas - 1, 1);
+      dataInicio.setHours(0, 0, 0, 0);
+      
+      const dataFim = new Date(anoVendas, mesVendas, 0);
+      dataFim.setHours(23, 59, 59, 999);
 
-      console.log('Período selecionado:', periodo);
+      console.log('Mês/Ano selecionado:', mesVendas, anoVendas);
       console.log('Data início:', dataInicio.toISOString());
-      console.log('Data fim:', hoje.toISOString());
+      console.log('Data fim:', dataFim.toISOString());
 
       const [ticketData, produtosData, margemData, clientesData, resumoData, dadosMensaisData] = await Promise.all([
-        relatorioService.getTicketMedio(dataInicio.toISOString(), hoje.toISOString()),
-        relatorioService.getProdutosMaisVendidos(5, dataInicio.toISOString(), hoje.toISOString()),
-        relatorioService.getMargemLucro(dataInicio.toISOString(), hoje.toISOString()),
-        relatorioService.getTopClientes(10, dataInicio.toISOString(), hoje.toISOString()),
-        relatorioService.getResumo(dataInicio.toISOString(), hoje.toISOString()),
+        relatorioService.getTicketMedio(dataInicio.toISOString(), dataFim.toISOString()),
+        relatorioService.getProdutosMaisVendidos(5, dataInicio.toISOString(), dataFim.toISOString()),
+        relatorioService.getMargemLucro(dataInicio.toISOString(), dataFim.toISOString()),
+        relatorioService.getTopClientes(10, dataInicio.toISOString(), dataFim.toISOString()),
+        relatorioService.getResumo(dataInicio.toISOString(), dataFim.toISOString()),
         relatorioService.getMensal(12)
       ]);
 
@@ -159,14 +163,17 @@ export default function Relatorios() {
       {/* Conteúdo das Abas */}
       {abaSelecionada === 'vendas' ? (
         <RelatorioVendas
-          periodo={periodo}
-          setPeriodo={setPeriodo}
+          mesVendas={mesVendas}
+          setMesVendas={setMesVendas}
+          anoVendas={anoVendas}
+          setAnoVendas={setAnoVendas}
           ticketMedio={ticketMedio}
           topProdutos={topProdutos}
           topClientes={topClientes}
           margemLucro={margemLucro}
           resumo={resumo}
           dadosMensais={dadosMensais}
+          getMesNome={getMesNome}
         />
       ) : (
         <RelatorioDespesasContent
@@ -183,7 +190,7 @@ export default function Relatorios() {
 }
 
 // Componente de Relatório de Vendas
-function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topClientes, margemLucro, resumo, dadosMensais }: any) {
+function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, ticketMedio, topProdutos, topClientes, margemLucro, resumo, dadosMensais, getMesNome }: any) {
   console.log('📋 RelatorioVendas renderizando');
   console.log('📋 dadosMensais prop:', dadosMensais);
   console.log('📋 Tipo de dadosMensais:', typeof dadosMensais);
@@ -191,18 +198,25 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
   console.log('📋 Comprimento:', dadosMensais?.length);
   return (
     <div className="space-y-6">
-      {/* Período Selection */}
-      <div className="flex justify-end">
+      {/* Filtros de Mês e Ano */}
+      <div className="flex gap-2 justify-end">
         <select
-          value={periodo}
-          onChange={(e) => setPeriodo(e.target.value)}
+          value={mesVendas}
+          onChange={(e) => setMesVendas(parseInt(e.target.value))}
           className="input py-2 px-3 text-sm"
         >
-          <option value="7">Últimos 7 dias</option>
-          <option value="15">Últimos 15 dias</option>
-          <option value="30">Últimos 30 dias</option>
-          <option value="60">Últimos 60 dias</option>
-          <option value="90">Últimos 90 dias</option>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+            <option key={m} value={m}>{getMesNome(m)}</option>
+          ))}
+        </select>
+        <select
+          value={anoVendas}
+          onChange={(e) => setAnoVendas(parseInt(e.target.value))}
+          className="input py-2 px-3 text-sm"
+        >
+          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(a => (
+            <option key={a} value={a}>{a}</option>
+          ))}
         </select>
       </div>
 
@@ -216,7 +230,7 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
           <div className="text-3xl font-bold text-purple-primary">
             R$ {resumo?.faturamentoTotal?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-text-secondary text-xs mt-2">Receita bruta</p>
+          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
         </div>
 
         <div key="custos" className="card shadow-lg hover:shadow-xl hover:shadow-orange-500/20 transition">
@@ -227,7 +241,7 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
           <div className="text-3xl font-bold text-orange-500">
             R$ {resumo?.custoTotal?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-text-secondary text-xs mt-2">Custo de aquisição</p>
+          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
         </div>
 
         <div key="despesas" className="card shadow-lg hover:shadow-xl hover:shadow-red-500/20 transition">
@@ -238,7 +252,7 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
           <div className="text-3xl font-bold text-red-500">
             R$ {resumo?.despesasTotal?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-text-secondary text-xs mt-2">Custos operacionais</p>
+          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
         </div>
 
         <div key="ticket" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
@@ -249,7 +263,7 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
           <div className="text-3xl font-bold text-purple-primary">
             R$ {ticketMedio?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-text-secondary text-xs mt-2">Valor médio por comanda</p>
+          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
         </div>
 
         <div key="lucro" className="card shadow-lg hover:shadow-xl hover:shadow-green-500/20 transition">
@@ -260,7 +274,7 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
           <div className="text-3xl font-bold text-green-500">
             R$ {resumo?.lucroLiquido?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-text-secondary text-xs mt-2">Faturamento - Custos - Despesas</p>
+          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
         </div>
       </div>
 
@@ -274,7 +288,8 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
           <div className="text-3xl font-bold text-blue-500">
             {resumo?.margemGrossa?.toFixed(1) || '0'}%
           </div>
-          <p className="text-text-secondary text-xs mt-2">Sobre vendas (sem despesas)</p>
+          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
+          <p className="text-text-secondary text-xs mt-1">Sobre vendas (sem despesas)</p>
         </div>
 
         <div key="margem-liquida" className="card shadow-lg hover:shadow-xl hover:shadow-green-500/20 transition">
@@ -285,7 +300,8 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, topCli
           <div className="text-3xl font-bold text-green-500">
             {resumo?.margemLiquida?.toFixed(1) || '0'}%
           </div>
-          <p className="text-text-secondary text-xs mt-2">Sobre vendas (com despesas)</p>
+          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
+          <p className="text-text-secondary text-xs mt-1">Sobre vendas (com despesas)</p>
         </div>
       </div>
 
