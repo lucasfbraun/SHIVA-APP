@@ -34,17 +34,24 @@ export default function Relatorios() {
       const dataInicio = new Date();
       dataInicio.setDate(hoje.getDate() - parseInt(periodo));
 
-      const [ticket, produtos, margem] = await Promise.all([
+      const [ticketData, produtosData, margemData] = await Promise.all([
         relatorioService.getTicketMedio(dataInicio.toISOString(), hoje.toISOString()),
         relatorioService.getProdutosMaisVendidos(5, dataInicio.toISOString(), hoje.toISOString()),
         relatorioService.getMargemLucro(dataInicio.toISOString(), hoje.toISOString())
       ]);
 
-      setTicketMedio(ticket);
+      // Extrair o valor de ticketMedio do objeto retornado
+      setTicketMedio(ticketData?.ticketMedio || 0);
+      // Processar produtos
+      const produtos = Array.isArray(produtosData) ? produtosData : (produtosData?.produtos || []);
       setTopProdutos(produtos);
-      setMargemLucro(margem);
+      // Extrair a margem do objeto retornado
+      setMargemLucro(margemData?.margemPercentual || 0);
     } catch (error) {
       console.error('Erro ao carregar relatórios:', error);
+      setTicketMedio(0);
+      setTopProdutos([]);
+      setMargemLucro(0);
     } finally {
       setLoading(false);
     }
@@ -194,7 +201,7 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, margem
             {topProdutos?.[0]?.nome || '-'}
           </div>
           <p className="text-text-secondary text-xs mt-2">
-            {topProdutos?.[0]?.quantidade || 0} unidades vendidas
+            {topProdutos?.[0]?.quantidadeVendida || 0} unidades vendidas
           </p>
         </div>
       </div>
@@ -208,11 +215,11 @@ function RelatorioVendas({ periodo, setPeriodo, ticketMedio, topProdutos, margem
               <div key={idx} className="flex items-center justify-between p-3 bg-bg-input/50 rounded">
                 <div>
                   <p className="font-medium text-text-primary">{produto.nome}</p>
-                  <p className="text-sm text-text-secondary">{produto.quantidade} unidades</p>
+                  <p className="text-sm text-text-secondary">{produto.quantidadeVendida} unidades</p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-purple-primary">
-                    R$ {produto.valor_total?.toFixed(2) || '0.00'}
+                    R$ {produto.faturamento?.toFixed(2) || '0.00'}
                   </p>
                 </div>
               </div>
