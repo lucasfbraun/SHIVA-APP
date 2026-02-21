@@ -157,14 +157,19 @@ router.get('/relatorio/resumo', async (req: Request, res: Response) => {
   try {
     const { mes, ano } = req.query;
 
-    let where: any = {};
+    let where: any = {
+      paga: true // Apenas despesas pagas
+    };
 
     if (mes && ano) {
       const mesNum = parseInt(String(mes));
       const anoNum = parseInt(String(ano));
 
       const dataInicio = new Date(anoNum, mesNum - 1, 1);
+      dataInicio.setHours(0, 0, 0, 0);
+      
       const dataFim = new Date(anoNum, mesNum, 0);
+      dataFim.setHours(23, 59, 59, 999);
 
       where.data = {
         gte: dataInicio,
@@ -177,42 +182,33 @@ router.get('/relatorio/resumo', async (req: Request, res: Response) => {
       orderBy: { data: 'desc' }
     });
 
-    // Calcular totais
-    const totalGeral = despesas.reduce((sum, d) => sum + d.valor, 0);
-    const totalPago = despesas
-      .filter(d => d.paga)
-      .reduce((sum, d) => sum + d.valor, 0);
-    const totalAberto = totalGeral - totalPago;
-
-    // Agrupar por categoria
-    const porCategoria: any = {};
-    despesas.forEach(d => {
-      if (!porCategoria[d.categoria]) {
-        porCategoria[d.categoria] = {
-          total: 0,
-          itemCount: 0
-        };
-      }
-      porCategoria[d.categoria].total += d.valor;
-      porCategoria[d.categoria].itemCount += 1;
-    });
+    // Calcular total
+    const total = despesas.reduce((sum, d) => sum + d.valor, 0);
 
     // Agrupar por tipo
-    const porTipo: any = {
-      FIXA: 0,
-      VARIÁVEL: 0
-    };
+    const fixa = despesas
+      .filter(d => d.tipo === 'FIXA')
+      .reduce((sum, d) => sum + d.valor, 0);
+    
+    const variavel = despesas
+      .filter(d => d.tipo === 'VARIÁVEL')
+      .reduce((sum, d) => sum + d.valor, 0);
+
+    // Agrupar por categoria (apenas o total)
+    const por_categoria: any = {};
     despesas.forEach(d => {
-      porTipo[d.tipo] = (porTipo[d.tipo] || 0) + d.valor;
+      if (!por_categoria[d.categoria]) {
+        por_categoria[d.categoria] = 0;
+      }
+      por_categoria[d.categoria] += d.valor;
     });
 
     res.json({
       periodo: `${mes}/${ano}`,
-      totalGeral,
-      totalPago,
-      totalAberto,
-      porCategoria,
-      porTipo,
+      total,
+      fixa,
+      variavel,
+      por_categoria,
       despesas
     });
   } catch (error: any) {
