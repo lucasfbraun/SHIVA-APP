@@ -20,6 +20,12 @@ export default {
         red: {
           action: '#E10600',
         },
+        green: {
+          action: '#10B981',
+        },
+        blue: {
+          action: '#3B82F6',
+        },
         text: {
           primary: '#F5F5F5',
           secondary: '#B3B3B3',

@@ -103,7 +103,7 @@ export default function MovimentoEstoque() {
         </p>
       </div>
 
-      <div className="card-primary max-w-3xl mx-auto">
+      <div className="card max-w-3xl mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Seleção de Produto */}
           <div>
@@ -121,7 +121,7 @@ export default function MovimentoEstoque() {
                     placeholder="Buscar produto por nome, código interno ou código de barras..."
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
-                    className="input-primary pl-10"
+                    className="input pl-10 w-full"
                   />
                 </div>
 
@@ -202,7 +202,7 @@ export default function MovimentoEstoque() {
                   type="date"
                   value={dataEntrada}
                   onChange={(e) => setDataEntrada(e.target.value)}
-                  className="input-primary"
+                  className="input w-full"
                   required
                 />
               </div>
@@ -217,7 +217,7 @@ export default function MovimentoEstoque() {
                   type="text"
                   value={numeroCupom}
                   onChange={(e) => setNumeroCupom(e.target.value)}
-                  className="input-primary"
+                  className="input w-full"
                   placeholder="Ex: 12345"
                 />
               </div>
@@ -234,7 +234,7 @@ export default function MovimentoEstoque() {
                   min="0.01"
                   value={quantidade}
                   onChange={(e) => setQuantidade(e.target.value)}
-                  className="input-primary"
+                  className="input w-full"
                   placeholder="Ex: 10"
                   required
                 />
@@ -251,7 +251,7 @@ export default function MovimentoEstoque() {
                   min="0"
                   value={custoUnitario}
                   onChange={(e) => setCustoUnitario(e.target.value)}
-                  className="input-primary"
+                  className="input w-full"
                   placeholder="Ex: 15.50"
                   required
                 />
@@ -281,7 +281,7 @@ export default function MovimentoEstoque() {
                 <textarea
                   value={observacao}
                   onChange={(e) => setObservacao(e.target.value)}
-                  className="input-primary"
+                  className="input w-full"
                   rows={3}
                   placeholder="Ex: Nota fiscal 12345, Fornecedor XYZ..."
                 />
