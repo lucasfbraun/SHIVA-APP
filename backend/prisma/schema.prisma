@@ -39,6 +39,8 @@ model Produto {
   estoque         Estoque?
   entradasEstoque EntradaEstoque[]
   itensComanda    ItemComanda[]
+  engenharias     EngenhariaProduto[] @relation("ProdutoComponente")
+  engenhariasParent EngenhariaProduto[] @relation("ProdutoPrincipal")
   
   @@map("produtos")
 }
@@ -154,5 +156,19 @@ model Despesa {
   @@map("despesas")
   @@index([data])
   @@index([tipo])
-  @@index([categoria])
+}
+
+model EngenhariaProduto {
+  id                String   @id @default(uuid())
+  produtoId         String   
+  componenteId      String   
+  quantidade        Float
+  criadoEm          DateTime @default(now())
+  atualizadoEm      DateTime @updatedAt
+
+  produto           Produto  @relation("ProdutoPrincipal", fields: [produtoId], references: [id], onDelete: Cascade)
+  componente        Produto  @relation("ProdutoComponente", fields: [componenteId], references: [id], onDelete: Cascade)
+
+  @@unique([produtoId, componenteId])
+  @@map("engenharia_produtos")
 }

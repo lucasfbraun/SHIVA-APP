@@ -87,7 +87,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST - Criar produto
 router.post('/', upload.single('imagem'), async (req: Request, res: Response) => {
   try {
-    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, controlaEstoque, ativo } = req.body;
+    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, controlaEstoque, ativo, tipo } = req.body;
     
     // Validações
     if (!nome || !precoVenda) {
@@ -116,6 +116,7 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
         custoMedio: custoMedio ? parseFloat(custoMedio) : 0,
         precoVenda: precoFinal,
         markup: markup ? parseFloat(markup) : 0,
+        tipo: tipo || 'COMPRADO',
         controlaEstoque: controlaEstoque === 'true' || controlaEstoque === true,
         ativo: ativo !== undefined ? (ativo === 'true' || ativo === true) : true,
         imagemUrl,
@@ -138,7 +139,7 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
 router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, ativo, controlaEstoque } = req.body;
+    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, ativo, controlaEstoque, tipo } = req.body;
     
     const produtoExistente = await prisma.produto.findUnique({ where: { id } });
     if (!produtoExistente) {
@@ -166,6 +167,7 @@ router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) 
         ...(custoMedio !== undefined && { custoMedio: parseFloat(custoMedio) }),
         ...(precoVenda !== undefined && { precoVenda: parseFloat(precoVenda) }),
         ...(markup !== undefined && { markup: parseFloat(markup) }),
+        ...(tipo && { tipo }),
         ...(ativo !== undefined && { ativo: ativo === 'true' }),
         ...(controlaEstoque !== undefined && { controlaEstoque: controlaEstoque === 'true' || controlaEstoque === true }),
         ...(imagemUrl && { imagemUrl })
@@ -378,6 +380,137 @@ router.get('/exportar/csv', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Erro ao exportar CSV:', error);
     res.status(500).json({ error: 'Erro ao exportar produtos para CSV' });
+  }
+});
+
+// ENGENHARIA - GET - Obter engenharia de um produto
+router.get('/:id/engenharia', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const engenharia = await prisma.engenhariaProduto.findMany({
+      where: { produtoId: id },
+      include: {
+        componente: {
+          select: {
+            id: true,
+            nome: true,
+            custoMedio: true,
+            codigoInterno: true,
+            categoria: true
+          }
+        }
+      }
+    });
+
+    res.json(engenharia);
+  } catch (error) {
+    console.error('Erro ao buscar engenharia:', error);
+    res.status(500).json({ error: 'Erro ao buscar engenharia' });
+  }
+});
+
+// ENGENHARIA - POST - Adicionar componente à engenharia
+router.post('/:id/engenharia', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { componenteId, quantidade } = req.body;
+
+    if (!componenteId || !quantidade || quantidade <= 0) {
+      return res.status(400).json({ error: 'ComponenteId e quantidade são obrigatórios' });
+    }
+
+    // Validar que o produto e componente existem
+    const [produto, componente] = await Promise.all([
+      prisma.produto.findUnique({ where: { id } }),
+      prisma.produto.findUnique({ where: { id: componenteId } })
+    ]);
+
+    if (!produto || !componente) {
+      return res.status(404).json({ error: 'Produto ou componente não encontrado' });
+    }
+
+    // Criar ou atualizar engenharia
+    const engenharia = await prisma.engenhariaProduto.upsert({
+      where: { produtoId_componenteId: { produtoId: id, componenteId } },
+      update: { quantidade: parseFloat(quantidade.toString()) },
+      create: {
+        produtoId: id,
+        componenteId,
+        quantidade: parseFloat(quantidade.toString())
+      },
+      include: {
+        componente: {
+          select: {
+            id: true,
+            nome: true,
+            custoMedio: true,
+            codigoInterno: true,
+            categoria: true
+          }
+        }
+      }
+    });
+
+    res.json(engenharia);
+  } catch (error) {
+    console.error('Erro ao adicionar componente à engenharia:', error);
+    res.status(500).json({ error: 'Erro ao adicionar componente' });
+  }
+});
+
+// ENGENHARIA - DELETE - Remover componente da engenharia
+router.delete('/:id/engenharia/:componenteId', async (req: Request, res: Response) => {
+  try {
+    const { id, componenteId } = req.params;
+
+    await prisma.engenhariaProduto.delete({
+      where: { produtoId_componenteId: { produtoId: id, componenteId } }
+    });
+
+    res.json({ message: 'Componente removido da engenharia' });
+  } catch (error) {
+    console.error('Erro ao remover componente:', error);
+    res.status(500).json({ error: 'Erro ao remover componente' });
+  }
+});
+
+// ENGENHARIA - POST - Calcular e atualizar custo médio do produto
+router.post('/:id/engenharia/calcular-custo', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Buscar todos os componentes da engenharia
+    const engenharia = await prisma.engenhariaProduto.findMany({
+      where: { produtoId: id },
+      include: { componente: true }
+    });
+
+    // Calcular custo total
+    const custoTotal = engenharia.reduce((acc, item) => {
+      return acc + (item.componente.custoMedio * item.quantidade);
+    }, 0);
+
+    // Atualizar o custo médio do produto
+    const produtoAtualizado = await prisma.produto.update({
+      where: { id },
+      data: { custoMedio: custoTotal }
+    });
+
+    res.json({
+      message: 'Custo médio atualizado',
+      custoMedio: produtoAtualizado.custoMedio,
+      componentes: engenharia.length,
+      detalhes: engenharia.map(e => ({
+        componente: e.componente.nome,
+        quantidade: e.quantidade,
+        custoUnitario: e.componente.custoMedio,
+        subtotal: e.componente.custoMedio * e.quantidade
+      }))
+    });
+  } catch (error) {
+    console.error('Erro ao calcular custo:', error);
+    res.status(500).json({ error: 'Erro ao calcular custo' });
   }
 });
 

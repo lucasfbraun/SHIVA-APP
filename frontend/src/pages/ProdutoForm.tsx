@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Camera, Upload, Calculator } from 'lucide-react';
 import { produtoService } from '@/services/produtoService';
 import { Produto } from '@/types';
+import EngenhariaModal from '@/components/EngenhariaModal';
 
 export default function ProdutoForm() {
   const { id } = useParams();
@@ -13,6 +14,7 @@ export default function ProdutoForm() {
   const [loadingProduto, setLoadingProduto] = useState(!!id);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [engenhariaModalAberto, setEngenhariaModalAberto] = useState(false);
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -91,6 +93,10 @@ export default function ProdutoForm() {
     }
   };
 
+  const handleEngenhariaAtualizada = (novosCusto: number) => {
+    setFormData(prev => ({ ...prev, custoMedio: novosCusto.toString() }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -111,6 +117,7 @@ export default function ProdutoForm() {
       data.append('custoMedio', formData.custoMedio || '0');
       data.append('precoVenda', formData.precoVenda);
       data.append('markup', formData.markup || '0');
+      data.append('tipo', formData.tipo);
       data.append('controlaEstoque', String(formData.controlaEstoque));
       data.append('ativo', String(formData.ativo));
 
@@ -331,6 +338,18 @@ export default function ProdutoForm() {
               <option value="FABRICADO">Fabricado</option>
             </select>
           </div>
+
+          {formData.tipo === 'FABRICADO' && id && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setEngenhariaModalAberto(true)}
+                className="btn-primary w-full"
+              >
+                Formar Engenharia
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Preços e Markup */}
@@ -410,6 +429,16 @@ export default function ProdutoForm() {
           </button>
         </div>
       </form>
+
+      {engenhariaModalAberto && id && (
+        <EngenhariaModal
+          produtoId={id}
+          produtoNome={formData.nome}
+          custoMedio={parseFloat(formData.custoMedio) || 0}
+          onClose={() => setEngenhariaModalAberto(false)}
+          onSave={handleEngenhariaAtualizada}
+        />
+      )}
     </div>
   );
 }

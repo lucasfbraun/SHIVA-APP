@@ -15,6 +15,17 @@ export interface Produto {
   criadoEm: string;
   atualizadoEm: string;
   estoque?: Estoque;
+  engenharias?: EngenhariaProduto[];
+}
+
+export interface EngenhariaProduto {
+  id: string;
+  produtoId: string;
+  componenteId: string;
+  quantidade: number;
+  criadoEm: string;
+  atualizadoEm: string;
+  componente?: Produto;
 }
 
 export interface Estoque {
