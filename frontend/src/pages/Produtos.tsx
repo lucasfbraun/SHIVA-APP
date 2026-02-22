@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Package, PackagePlus } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, PackagePlus, RefreshCw } from 'lucide-react';
 import { produtoService } from '@/services/produtoService';
 import { Produto } from '@/types';
 import api from '@/services/api';
@@ -16,6 +16,7 @@ export default function Produtos() {
   const [quantidade, setQuantidade] = useState('');
   const [custoUnitario, setCustoUnitario] = useState('');
   const [processando, setProcessando] = useState(false);
+  const [recalculando, setRecalculando] = useState(false);
 
   useEffect(() => {
     loadProdutos();
@@ -82,6 +83,25 @@ export default function Produtos() {
     }
   };
 
+  const handleRecalcularEstoque = async () => {
+    if (!confirm('Deseja recalcular o estoque de todos os produtos?\n\nIsso irá recalcular baseado nas entradas e saídas registradas.')) {
+      return;
+    }
+
+    try {
+      setRecalculando(true);
+      const response = await api.post('/estoque/recalcular');
+      
+      alert(`✅ Estoque recalculado com sucesso!\n\n${response.data.resultados.length} produto(s) atualizados.`);
+      loadProdutos(); // Recarregar lista de produtos
+    } catch (error) {
+      console.error('Erro ao recalcular estoque:', error);
+      alert('❌ Erro ao recalcular estoque');
+    } finally {
+      setRecalculando(false);
+    }
+  };
+
   const produtosFiltrados = produtos.filter((produto) => {
     return produto.nome.toLowerCase().includes(busca.toLowerCase()) ||
       produto.categoria?.toLowerCase().includes(busca.toLowerCase());
@@ -95,10 +115,21 @@ export default function Produtos() {
           <h1 className="title">Produtos</h1>
           <p className="text-text-secondary mt-2">Gerencie seu catálogo</p>
         </div>
-        <Link to="/produtos/novo" className="btn-primary flex items-center space-x-2 justify-center">
-          <Plus size={20} />
-          <span>Novo Produto</span>
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={handleRecalcularEstoque}
+            disabled={recalculando}
+            className="btn-secondary flex items-center space-x-2 justify-center"
+            title="Recalcular estoque de todos os produtos baseado nos movimentos registrados"
+          >
+            <RefreshCw size={20} className={recalculando ? 'animate-spin' : ''} />
+            <span>{recalculando ? 'Recalculando...' : 'Recalcular Estoque'}</span>
+          </button>
+          <Link to="/produtos/novo" className="btn-primary flex items-center space-x-2 justify-center">
+            <Plus size={20} />
+            <span>Novo Produto</span>
+          </Link>
+        </div>
       </div>
 
       {/* Filtros e Busca */}

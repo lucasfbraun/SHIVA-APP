@@ -278,4 +278,74 @@ router.get('/entradas', async (req: Request, res: Response) => {
   }
 });
 
+// POST - Recalcular estoque de um produto ou todos os produtos
+router.post('/recalcular', async (req: Request, res: Response) => {
+  try {
+    const { produtoId } = req.body;
+    
+    // Se não passou produtoId, recalcula todos
+    const produtos = produtoId 
+      ? await prisma.produto.findMany({ where: { id: produtoId, controlaEstoque: true } })
+      : await prisma.produto.findMany({ where: { controlaEstoque: true } });
+    
+    if (produtos.length === 0) {
+      return res.status(404).json({ error: 'Nenhum produto encontrado para recalcular' });
+    }
+    
+    const resultados = [];
+    
+    for (const produto of produtos) {
+      // Calcular total de entradas
+      const entradas = await prisma.entradaEstoque.aggregate({
+        where: { produtoId: produto.id },
+        _sum: { quantidade: true }
+      });
+      
+      const totalEntradas = entradas._sum.quantidade || 0;
+      
+      // Calcular total de saídas (vendas em comandas fechadas)
+      const saidas = await prisma.itemComanda.aggregate({
+        where: { 
+          produtoId: produto.id,
+          comanda: { status: 'FECHADA' }
+        },
+        _sum: { quantidade: true }
+      });
+      
+      const totalSaidas = saidas._sum.quantidade || 0;
+      
+      // Estoque correto = entradas - saídas
+      const estoqueCorreto = totalEntradas - totalSaidas;
+      
+      // Atualizar no banco
+      await prisma.estoque.upsert({
+        where: { produtoId: produto.id },
+        update: { quantidade: estoqueCorreto },
+        create: { 
+          produtoId: produto.id, 
+          quantidade: estoqueCorreto 
+        }
+      });
+      
+      resultados.push({
+        produtoId: produto.id,
+        nome: produto.nome,
+        totalEntradas,
+        totalSaidas,
+        estoqueAnterior: produto.estoque?.quantidade || 0,
+        estoqueCorreto
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: `Estoque recalculado para ${resultados.length} produto(s)`,
+      resultados
+    });
+  } catch (error: any) {
+    console.error('Erro ao recalcular estoque:', error);
+    res.status(500).json({ error: error.message || 'Erro ao recalcular estoque' });
+  }
+});
+
 export default router;
