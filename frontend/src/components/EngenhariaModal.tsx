@@ -134,7 +134,13 @@ export default function EngenhariaModal({ produtoId, produtoNome, custoMedio, on
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <select
               value={componenteSelecionado}
-              onChange={(e) => setComponenteSelecionado(e.target.value)}
+              onChange={(e) => {
+                setComponenteSelecionado(e.target.value);
+                const produtoSelecionado = todasProdutos.find(p => p.id === e.target.value);
+                if (produtoSelecionado) {
+                  setQuantidade((produtoSelecionado.quantidadeRefCalculo || 1).toString());
+                }
+              }}
               className="input col-span-2"
             >
               <option value="">Selecione um produto...</option>
@@ -164,6 +170,12 @@ export default function EngenhariaModal({ produtoId, produtoNome, custoMedio, on
               Adicionar
             </button>
           </div>
+          
+          {componenteSelecionado && todasProdutos.find(p => p.id === componenteSelecionado) && (
+            <div className="mt-3 p-2 bg-purple-primary/10 rounded text-sm text-text-secondary">
+              Sugestão: Unidade <span className="font-semibold text-text-primary">{todasProdutos.find(p => p.id === componenteSelecionado)?.unidadeMedida || 'UN'}</span> - Qtd. Ref. <span className="font-semibold text-text-primary">{todasProdutos.find(p => p.id === componenteSelecionado)?.quantidadeRefCalculo || 1}</span>
+            </div>
+          )}
         </div>
 
         {/* Componentes da Engenharia */}
@@ -180,6 +192,8 @@ export default function EngenhariaModal({ produtoId, produtoNome, custoMedio, on
                     <th className="text-left py-2 px-4 font-medium text-text-secondary">Componente</th>
                     <th className="text-left py-2 px-4 font-medium text-text-secondary">Cód. Interno</th>
                     <th className="text-right py-2 px-4 font-medium text-text-secondary">Qtd</th>
+                    <th className="text-center py-2 px-4 font-medium text-text-secondary">Unidade</th>
+                    <th className="text-right py-2 px-4 font-medium text-text-secondary">Qtd. Ref.</th>
                     <th className="text-right py-2 px-4 font-medium text-text-secondary">Custo Unit.</th>
                     <th className="text-right py-2 px-4 font-medium text-text-secondary">Subtotal</th>
                     <th className="text-center py-2 px-4 font-medium text-text-secondary">Ação</th>
@@ -191,6 +205,8 @@ export default function EngenhariaModal({ produtoId, produtoNome, custoMedio, on
                       <td className="py-3 px-4 text-text-primary font-medium">{comp.componente?.nome}</td>
                       <td className="py-3 px-4 text-text-secondary text-sm">{comp.componente?.codigoInterno || '-'}</td>
                       <td className="py-3 px-4 text-text-primary text-right">{comp.quantidade}</td>
+                      <td className="py-3 px-4 text-text-primary text-center">{comp.componente?.unidadeMedida || 'UN'}</td>
+                      <td className="py-3 px-4 text-text-primary text-right">{comp.componente?.quantidadeRefCalculo || 1}</td>
                       <td className="py-3 px-4 text-text-primary text-right">
                         R$ {(comp.componente?.custoMedio || 0).toFixed(2)}
                       </td>
