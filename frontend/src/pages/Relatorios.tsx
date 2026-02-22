@@ -373,7 +373,7 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tod
 
         <div key="custos" className="card shadow-lg hover:shadow-xl hover:shadow-orange-500/20 transition">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-text-secondary text-sm">Custo dos Produtos</span>
+            <span className="text-text-secondary text-sm">Custo dos Produtos Faturados</span>
             <Package className="text-orange-500" size={20} />
           </div>
           <div className="text-3xl font-bold text-orange-500">
@@ -413,6 +413,31 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tod
             R$ {resumo?.lucroLiquido?.toFixed(2) || '0.00'}
           </div>
           <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
+        </div>
+      </div>
+
+      {/* Cards com dados de estoque */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div key="custo-estoque" className="card shadow-lg hover:shadow-xl hover:shadow-yellow-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Custo Estoque</span>
+            <Package className="text-yellow-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-yellow-500">
+            R$ {resumo?.custoEstoque?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-text-secondary text-xs mt-2">Custo médio × Saldo em estoque</p>
+        </div>
+
+        <div key="valor-estoque-venda" className="card shadow-lg hover:shadow-xl hover:shadow-blue-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Valor Estoque Venda</span>
+            <TrendingUp className="text-blue-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-blue-500">
+            R$ {resumo?.valorEstoqueVenda?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-text-secondary text-xs mt-2">Valor de venda × Saldo em estoque</p>
         </div>
       </div>
 

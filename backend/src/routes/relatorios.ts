@@ -213,6 +213,28 @@ router.get('/resumo', async (req: Request, res: Response) => {
     const lucroLiquido = faturamentoTotal - custoTotal - despesasTotal;
     const margemLiquida = faturamentoTotal > 0 ? (lucroLiquido / faturamentoTotal) * 100 : 0;
 
+    // Custos e valores de estoque
+    const produtos = await prisma.produto.findMany({
+      select: {
+        custoMedio: true,
+        precoVenda: true,
+        estoque: {
+          select: {
+            quantidade: true
+          }
+        }
+      }
+    });
+
+    let custoEstoque = 0;
+    let valorEstoqueVenda = 0;
+
+    produtos.forEach(produto => {
+      const saldoEstoque = produto.estoque?.quantidade || 0;
+      custoEstoque += (produto.custoMedio || 0) * saldoEstoque;
+      valorEstoqueVenda += (produto.precoVenda || 0) * saldoEstoque;
+    });
+
     res.json({
       faturamentoTotal: parseFloat(faturamentoTotal.toFixed(2)),
       custoTotal: parseFloat(custoTotal.toFixed(2)),
@@ -220,7 +242,9 @@ router.get('/resumo', async (req: Request, res: Response) => {
       lucroGrosso: parseFloat(lucroGrosso.toFixed(2)),
       margemGrossa: parseFloat(margemGrossa.toFixed(2)),
       lucroLiquido: parseFloat(lucroLiquido.toFixed(2)),
-      margemLiquida: parseFloat(margemLiquida.toFixed(2))
+      margemLiquida: parseFloat(margemLiquida.toFixed(2)),
+      custoEstoque: parseFloat(custoEstoque.toFixed(2)),
+      valorEstoqueVenda: parseFloat(valorEstoqueVenda.toFixed(2))
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Erro ao gerar resumo' });
