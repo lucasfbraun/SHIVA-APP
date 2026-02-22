@@ -38,7 +38,13 @@ export default function OCRCupom() {
         body: formData
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        const text = await response.text();
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        data = {};
+      }
       
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao processar cupom');

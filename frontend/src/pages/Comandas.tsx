@@ -35,7 +35,9 @@ export default function Comandas() {
 
   const loadClientes = async () => {
     try {
+      console.log('Carregando clientes...');
       const data = await clienteService.getAll();
+      console.log('Clientes carregados:', data);
       setClientes(data);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
@@ -45,7 +47,9 @@ export default function Comandas() {
   const loadComandas = async () => {
     try {
       setLoading(true);
+      console.log('Carregando comandas com status:', filtroStatus);
       const data = await comandaService.getAll(filtroStatus);
+      console.log('Comandas carregadas:', data);
       
       // Filtrar por mês e ano
       const inicioMes = new Date(ano, mes - 1, 1);

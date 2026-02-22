@@ -20,6 +20,20 @@ export interface AuthResponse {
   token: string;
 }
 
+// Helper para fazer parse seguro de JSON
+const safeJsonParse = async (response: Response): Promise<any> => {
+  const text = await response.text();
+  if (!text || text.trim() === '') {
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('Erro ao fazer parse de JSON:', e);
+    throw new Error('Resposta inválida do servidor');
+  }
+};
+
 export const authService = {
   login: async (data: LoginData): Promise<AuthResponse> => {
     const response = await fetch(`${API_URL}/login`, {
@@ -28,12 +42,12 @@ export const authService = {
       body: JSON.stringify(data)
     });
 
+    const result = await safeJsonParse(response);
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Erro ao fazer login');
+      throw new Error(result.error || 'Erro ao fazer login');
     }
 
-    const result = await response.json();
     localStorage.setItem('token', result.token);
     localStorage.setItem('usuario', JSON.stringify(result.usuario));
     return result;
@@ -46,12 +60,12 @@ export const authService = {
       body: JSON.stringify(data)
     });
 
+    const result = await safeJsonParse(response);
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Erro ao registrar');
+      throw new Error(result.error || 'Erro ao registrar');
     }
 
-    const result = await response.json();
     localStorage.setItem('token', result.token);
     localStorage.setItem('usuario', JSON.stringify(result.usuario));
     return result;
