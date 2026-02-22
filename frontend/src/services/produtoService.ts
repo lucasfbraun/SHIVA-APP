@@ -59,6 +59,7 @@ export const produtoService = {
     dataEntrada?: string;
     numeroCupom?: string;
     observacao?: string;
+    tipoMovimento?: 'ENTRADA' | 'SAIDA';
   }) {
     const { data } = await api.post('/estoque/entrada', entrada);
     return data;

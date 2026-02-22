@@ -30,10 +30,10 @@ router.get('/verificar/:produtoId', async (req: Request, res: Response) => {
   }
 });
 
-// POST - Entrada de estoque (atualiza quantidade e custo médio)
+// POST - Movimento de estoque (entrada ou saída)
 router.post('/entrada', async (req: Request, res: Response) => {
   try {
-    const { produtoId, quantidade, custoUnitario, dataEntrada, numeroCupom, observacao } = req.body;
+    const { produtoId, quantidade, custoUnitario, dataEntrada, numeroCupom, observacao, tipoMovimento } = req.body;
     
     if (!produtoId || !quantidade || !custoUnitario) {
       return res.status(400).json({ error: 'Produto, quantidade e custo são obrigatórios' });
@@ -41,6 +41,7 @@ router.post('/entrada', async (req: Request, res: Response) => {
     
     const qtd = parseFloat(quantidade);
     const custo = parseFloat(custoUnitario); 
+    const tipo = tipoMovimento?.toUpperCase() || 'ENTRADA';
     
     if (qtd <= 0 || custo < 0) {
       return res.status(400).json({ error: 'Quantidade e custo devem ser positivos' });
@@ -48,6 +49,10 @@ router.post('/entrada', async (req: Request, res: Response) => {
     
     if (!Number.isInteger(qtd)) {
       return res.status(400).json({ error: 'Quantidade deve ser um número inteiro' });
+    }
+    
+    if (!['ENTRADA', 'SAIDA'].includes(tipo)) {
+      return res.status(400).json({ error: 'Tipo de movimento inválido. Use ENTRADA ou SAIDA' });
     }
     
     // Buscar produto e estoque atual
@@ -60,18 +65,29 @@ router.post('/entrada', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Produto não encontrado' });
     }
     
-    // Calcular novo custo médio
     const estoqueAtual = produto.estoque?.quantidade || 0;
-    const custoMedioAtual = produto.custoMedio || 0;
     
-    const novaCustoMedio = estoqueAtual === 0
-      ? custo
-      : ((estoqueAtual * custoMedioAtual) + (qtd * custo)) / (estoqueAtual + qtd);
+    // Validar se há estoque suficiente para saída
+    if (tipo === 'SAIDA' && estoqueAtual < qtd) {
+      return res.status(400).json({ 
+        error: `Estoque insuficiente. Disponível: ${estoqueAtual}, Solicitado: ${qtd}` 
+      });
+    }
+    
+    // Calcular novo custo médio (apenas para ENTRADA)
+    let novoCustoMedio = produto.custoMedio || 0;
+    
+    if (tipo === 'ENTRADA') {
+      const custoMedioAtual = produto.custoMedio || 0;
+      novoCustoMedio = estoqueAtual === 0
+        ? custo
+        : ((estoqueAtual * custoMedioAtual) + (qtd * custo)) / (estoqueAtual + qtd);
+    }
     
     // Atualizar em transação
     const resultado = await prisma.$transaction(async (tx) => {
-      // Registrar entrada
-      const entrada = await tx.entradaEstoque.create({
+      // Registrar movimento
+      const movimento = await tx.entradaEstoque.create({
         data: {
           produtoId,
           quantidade: qtd,
@@ -79,34 +95,41 @@ router.post('/entrada', async (req: Request, res: Response) => {
           dataEntrada: dataEntrada ? new Date(dataEntrada) : new Date(),
           numeroCupom: numeroCupom || null,
           tipoEntrada: 'MANUAL',
+          tipoMovimento: tipo,
           observacao
         }
       });
       
-      // Atualizar custo médio do produto
-      await tx.produto.update({
-        where: { id: produtoId },
-        data: { custoMedio: novaCustoMedio }
-      });
+      // Atualizar custo médio do produto (apenas para ENTRADA)
+      if (tipo === 'ENTRADA') {
+        await tx.produto.update({
+          where: { id: produtoId },
+          data: { custoMedio: novoCustoMedio }
+        });
+      }
       
-      // Atualizar estoque
+      // Atualizar estoque (incrementa para ENTRADA, decrementa para SAIDA)
+      const novaQuantidade = tipo === 'ENTRADA' 
+        ? estoqueAtual + qtd 
+        : estoqueAtual - qtd;
+      
       const estoque = await tx.estoque.upsert({
         where: { produtoId },
         update: {
-          quantidade: { increment: qtd }
+          quantidade: novaQuantidade
         },
         create: {
           produtoId,
-          quantidade: qtd
+          quantidade: novaQuantidade
         }
       });
       
-      return { entrada, estoque, novaCustoMedio };
+      return { movimento, estoque, custoMedio: novoCustoMedio };
     });
     
     res.status(201).json(resultado);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Erro ao registrar entrada' });
+    res.status(500).json({ error: error.message || 'Erro ao registrar movimento' });
   }
 });
 

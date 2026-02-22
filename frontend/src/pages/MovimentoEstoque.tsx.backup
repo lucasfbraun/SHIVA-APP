@@ -17,6 +17,7 @@ export default function MovimentoEstoque() {
 
   useEffect(() => {
     loadProdutos();
+    // Definir data atual como padrão
     const hoje = new Date().toISOString().split('T')[0];
     setDataEntrada(hoje);
   }, []);
@@ -57,11 +58,13 @@ export default function MovimentoEstoque() {
       return;
     }
 
+    // Validar custo unitário apenas para ENTRADA
     if (tipoMovimento === 'ENTRADA' && (!custo || custo < 0)) {
       alert('Custo unitário deve ser informado');
       return;
     }
 
+    // Validar estoque para saída
     if (tipoMovimento === 'SAIDA') {
       const estoqueAtual = produtoSelecionado.estoque?.quantidade || 0;
       if (qtd > estoqueAtual) {
@@ -72,6 +75,7 @@ export default function MovimentoEstoque() {
 
     try {
       setLoading(true);
+      // Para SAIDA, usar custo médio do produto se não informado
       const custoFinal = tipoMovimento === 'SAIDA' && !custo 
         ? produtoSelecionado.custoMedio || 0
         : custo;
@@ -92,6 +96,7 @@ export default function MovimentoEstoque() {
       
       alert(mensagem);
       
+      // Limpar form
       setProdutoSelecionado(null);
       setQuantidade('');
       setCustoUnitario('');
@@ -100,9 +105,11 @@ export default function MovimentoEstoque() {
       setBusca('');
       setTipoMovimento('ENTRADA');
       
+      // Resetar data para hoje
       const hoje = new Date().toISOString().split('T')[0];
       setDataEntrada(hoje);
       
+      // Recarregar produtos para atualizar estoque
       loadProdutos();
     } catch (error: any) {
       console.error('Erro ao registrar movimento:', error);
@@ -279,7 +286,7 @@ export default function MovimentoEstoque() {
                 </div>
               )}
 
-              {/* Quantidade */}
+              {/* Quantidade */
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
                   <TrendingUp className="inline mr-2" size={16} />
@@ -305,7 +312,6 @@ export default function MovimentoEstoque() {
                 </p>
               </div>
 
-              {/* Custo Unitário - apenas para ENTRADA */}
               {tipoMovimento === 'ENTRADA' && (
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">
@@ -327,7 +333,6 @@ export default function MovimentoEstoque() {
                 </div>
               )}
 
-              {/* Resumo do Valor Total */}
               {quantidade && (tipoMovimento === 'ENTRADA' ? custoUnitario : produtoSelecionado?.custoMedio) && (
                 <div className={`p-4 rounded-lg border ${
                   tipoMovimento === 'ENTRADA'
