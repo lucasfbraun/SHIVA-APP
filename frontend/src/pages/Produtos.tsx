@@ -185,7 +185,7 @@ export default function Produtos() {
           <button
             onClick={() => handleExportar('excel')}
             disabled={exportando}
-            className="btn-secondary flex items-center space-x-2 justify-center"
+            className="btn-primary flex items-center space-x-2 justify-center"
             title="Exportar produtos para Excel"
           >
             <FileSpreadsheet size={20} />
@@ -194,7 +194,7 @@ export default function Produtos() {
           <button
             onClick={() => handleExportar('csv')}
             disabled={exportando}
-            className="btn-secondary flex items-center space-x-2 justify-center"
+            className="btn-primary flex items-center space-x-2 justify-center"
             title="Exportar produtos para CSV"
           >
             <Download size={20} />
