@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Package, PackagePlus, PenLine } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, PackagePlus } from 'lucide-react';
 import { produtoService } from '@/services/produtoService';
 import { Produto } from '@/types';
 import api from '@/services/api';
 
 export default function Produtos() {
+  // VERSÃO ATUALIZADA - SEM BOTÃO DE EDITAR ESTOQUE MANUAL - BUILD: 2026-02-22
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
   const [filtroAtivo, setFiltroAtivo] = useState<boolean | undefined>(true);
   const [modalEntrada, setModalEntrada] = useState(false);
-  const [modalEditarEstoque, setModalEditarEstoque] = useState(false);
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
   const [quantidade, setQuantidade] = useState('');
   const [custoUnitario, setCustoUnitario] = useState('');
-  const [novoEstoque, setNovoEstoque] = useState('');
   const [processando, setProcessando] = useState(false);
 
   useEffect(() => {
@@ -53,12 +52,6 @@ export default function Produtos() {
     setModalEntrada(true);
   };
 
-  const abrirModalEditarEstoque = (produto: Produto) => {
-    setProdutoSelecionado(produto);
-    setNovoEstoque((produto.estoque?.quantidade || 0).toString());
-    setModalEditarEstoque(true);
-  };
-
   const handleEntradaEstoque = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -84,55 +77,6 @@ export default function Produtos() {
     } catch (error) {
       console.error('Erro ao dar entrada:', error);
       alert('Erro ao dar entrada no estoque');
-    } finally {
-      setProcessando(false);
-    }
-  };
-
-  const handleEditarEstoque = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!produtoSelecionado || novoEstoque === '') {
-      alert('Informe a quantidade em estoque');
-      return;
-    }
-
-    try {
-      setProcessando(true);
-      
-      const qtd = parseFloat(novoEstoque);
-      
-      if (isNaN(qtd)) {
-        alert('Quantidade inválida');
-        return;
-      }
-      
-      console.log('Atualizando estoque:', {
-        produtoId: produtoSelecionado.id,
-        produtoNome: produtoSelecionado.nome,
-        quantidadeAtual: produtoSelecionado.estoque?.quantidade || 0,
-        quantidadeNova: qtd
-      });
-      
-      const response = await api.put(`/estoque/manual/${produtoSelecionado.id}`, {
-        quantidadeEstoque: qtd,
-      });
-      
-      console.log('Resposta da API:', response.data);
-
-      // Fechar modal
-      setModalEditarEstoque(false);
-      setProdutoSelecionado(null);
-      setNovoEstoque('');
-      
-      // Recarregar produtos
-      await loadProdutos();
-      
-      alert('Estoque atualizado com sucesso!');
-    } catch (error: any) {
-      console.error('Erro ao editar estoque:', error);
-      console.error('Detalhes do erro:', error.response?.data);
-      alert(`Erro ao editar estoque: ${error.response?.data?.error || error.message}`);
     } finally {
       setProcessando(false);
     }
@@ -260,32 +204,26 @@ export default function Produtos() {
                 {/* Ações */}
                 <div className="flex gap-2 pt-2">
                   {produto.controlaEstoque !== false && (
-                    <>
-                      <button
-                        onClick={() => abrirModalEntrada(produto)}
-                        className="flex-1 btn-secondary py-2 text-sm flex items-center justify-center space-x-1 hover:bg-purple-primary/10"
-                      >
-                        <PackagePlus size={16} />
-                        <span>Entrada</span>
-                      </button>
-                      <button
-                        onClick={() => abrirModalEditarEstoque(produto)}
-                        className="btn-secondary py-2 px-3 text-sm flex items-center justify-center hover:bg-purple-primary/10"
-                        title="Editar estoque manualmente"
-                      >
-                        <PenLine size={16} />
-                      </button>
-                    </>
+                    <button
+                      onClick={() => abrirModalEntrada(produto)}
+                      className="flex-1 btn-secondary py-2 text-sm flex items-center justify-center space-x-1 hover:bg-purple-primary/10"
+                      title="Registrar entrada de estoque com nota/cupom"
+                    >
+                      <PackagePlus size={16} />
+                      <span>Entrada</span>
+                    </button>
                   )}
                   <Link
                     to={`/produtos/editar/${produto.id}`}
                     className="btn-secondary py-2 px-3 text-sm flex items-center justify-center"
+                    title="Editar informações do produto"
                   >
                     <Edit size={16} />
                   </Link>
                   <button
                     onClick={() => handleDelete(produto.id)}
                     className="btn-secondary py-2 px-3 text-sm hover:bg-red-action/10 hover:border-red-action"
+                    title="Desativar produto"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -359,65 +297,6 @@ export default function Produtos() {
                   className="btn-primary flex-1 disabled:opacity-50"
                 >
                   {processando ? 'Processando...' : 'Confirmar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Editar Estoque Manualmente */}
-      {modalEditarEstoque && produtoSelecionado && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-background-secondary border border-purple-primary/30 rounded-2xl p-6 max-w-md w-full shadow-glow-purple">
-            <h2 className="text-xl font-semibold text-text-primary mb-4">
-              Editar Estoque Manualmente
-            </h2>
-            <p className="text-text-secondary mb-2">{produtoSelecionado.nome}</p>
-            <p className="text-sm text-text-secondary/70 mb-4">
-              (sem cupom/nota - não altera custo médio)
-            </p>
-            
-            <form onSubmit={handleEditarEstoque} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Quantidade em Estoque *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={novoEstoque}
-                  onChange={(e) => setNovoEstoque(e.target.value)}
-                  className="input w-full"
-                  placeholder="Ex: 15"
-                  autoFocus
-                  required
-                />
-                {produtoSelecionado.controlaEstoque !== false && (
-                  <p className="text-xs text-text-secondary mt-1">
-                    Estoque atual: {(produtoSelecionado.estoque?.quantidade || 0).toFixed(2)}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalEditarEstoque(false);
-                    setProdutoSelecionado(null);
-                  }}
-                  className="btn-secondary flex-1"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={processando}
-                  className="btn-primary flex-1 disabled:opacity-50"
-                >
-                  {processando ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
             </form>
