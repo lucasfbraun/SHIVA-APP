@@ -9,6 +9,7 @@ export interface Produto {
   precoVenda: number;
   imagemUrl?: string;
   markup?: number;
+  tipo?: 'COMPRADO' | 'FABRICADO';
   controlaEstoque?: boolean;
   ativo: boolean;
   criadoEm: string;

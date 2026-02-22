@@ -23,6 +23,7 @@ export default function ProdutoForm() {
     custoMedio: '',
     precoVenda: '',
     markup: '100',
+    tipo: 'COMPRADO',
     controlaEstoque: true,
     ativo: true,
   });
@@ -46,6 +47,7 @@ export default function ProdutoForm() {
         custoMedio: produto.custoMedio.toString(),
         precoVenda: produto.precoVenda.toString(),
         markup: produto.markup?.toString() || '100',
+        tipo: produto.tipo || 'COMPRADO',
         controlaEstoque: produto.controlaEstoque !== undefined ? produto.controlaEstoque : true,
         ativo: produto.ativo !== undefined ? produto.ativo : true,
       });
@@ -314,6 +316,20 @@ export default function ProdutoForm() {
                 <span className="text-xs text-text-secondary">Produtos inativos não aparecem na venda mas continuam no sistema</span>
               </div>
             </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Tipo de Produto
+            </label>
+            <select
+              value={formData.tipo}
+              onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+              className="input w-full"
+            >
+              <option value="COMPRADO">Comprado</option>
+              <option value="FABRICADO">Fabricado</option>
+            </select>
           </div>
         </div>
 

@@ -30,6 +30,7 @@ model Produto {
   precoVenda      Float
   imagemUrl       String?
   markup          Float?   @default(0)
+  tipo            String   @default("COMPRADO") // COMPRADO, FABRICADO
   controlaEstoque Boolean  @default(true)
   ativo           Boolean  @default(true)
   criadoEm        DateTime @default(now())
