@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter, Search, X } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter, Search, X, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { relatorioService } from '@/services/relatorioService';
 import { despesaService } from '@/services/despesaService';
 import { estoqueService, EntradaEstoque } from '@/services/estoqueService';
@@ -31,6 +31,7 @@ export default function Relatorios() {
   // Estoque
   const [entradas, setEntradas] = useState<EntradaEstoque[]>([]);
   const [filtroTipo, setFiltroTipo] = useState<'TODOS' | 'MANUAL' | 'OCR'>('TODOS');
+  const [filtroMovimento, setFiltroMovimento] = useState<'TODOS' | 'ENTRADA' | 'SAIDA'>('TODOS');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [produtoId, setProdutoId] = useState('');
@@ -51,7 +52,7 @@ export default function Relatorios() {
     } else if (abaSelecionada === 'estoque') {
       loadRelatorioEstoque();
     }
-  }, [abaSelecionada, mesVendas, anoVendas, mes, ano, filtroTipo, dataInicio, dataFim, produtoId]);
+  }, [abaSelecionada, mesVendas, anoVendas, mes, ano, filtroTipo, filtroMovimento, dataInicio, dataFim, produtoId]);
 
   const loadProdutos = async () => {
     try {
@@ -141,6 +142,10 @@ export default function Relatorios() {
       
       if (filtroTipo !== 'TODOS') {
         filtros.tipoEntrada = filtroTipo;
+      }
+
+      if (filtroMovimento !== 'TODOS') {
+        filtros.tipoMovimento = filtroMovimento;
       }
       
       if (dataInicio) {
@@ -267,6 +272,8 @@ export default function Relatorios() {
           entradas={entradas}
           filtroTipo={filtroTipo}
           setFiltroTipo={setFiltroTipo}
+          filtroMovimento={filtroMovimento}
+          setFiltroMovimento={setFiltroMovimento}
           dataInicio={dataInicio}
           setDataInicio={setDataInicio}
           dataFim={dataFim}
@@ -536,7 +543,7 @@ function RelatorioDespesasContent({ mes, setMes, ano, setAno, resumoDespesas, ge
 }
 
 // Componente de Relatório de Estoque
-function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInicio, setDataInicio, dataFim, setDataFim, produtoId, setProdutoId, produtos, buscaProduto, setBuscaProduto, produtoSelecionado, setProdutoSelecionado, mostrarSugestoes, setMostrarSugestoes }: any) {
+function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMovimento, setFiltroMovimento, dataInicio, setDataInicio, dataFim, setDataFim, produtoId, setProdutoId, produtos, buscaProduto, setBuscaProduto, produtoSelecionado, setProdutoSelecionado, mostrarSugestoes, setMostrarSugestoes }: any) {
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -557,6 +564,7 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInic
 
   const limparFiltros = () => {
     setFiltroTipo('TODOS');
+    setFiltroMovimento('TODOS');
     setDataInicio('');
     setDataFim('');
     setProdutoId('');
@@ -668,6 +676,22 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInic
             </select>
           </div>
 
+          {/* Tipo de Movimento */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Tipo de Movimento
+            </label>
+            <select
+              value={filtroMovimento}
+              onChange={(e) => setFiltroMovimento(e.target.value as any)}
+              className="input py-2 px-3 text-sm w-full"
+            >
+              <option value="TODOS">Todos</option>
+              <option value="ENTRADA">Entrada</option>
+              <option value="SAIDA">Saída</option>
+            </select>
+          </div>
+
           {/* Data Início */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
@@ -762,6 +786,7 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInic
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Qtd</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Custo Unit.</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Total</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Movimento</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Tipo</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Nº Cupom</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Observação</th>
@@ -798,7 +823,19 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInic
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      {entrada.tipoEntrada === 'MANUAL' ? (
+                      {entrada.tipoMovimento === 'ENTRADA' ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-action/10 text-green-action">
+                          <ArrowDownCircle size={12} className="mr-1" />
+                          Entrada
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-action/10 text-red-action">
+                          <ArrowUpCircle size={12} className="mr-1" />
+                          Saída
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">{entrada.tipoEntrada === 'MANUAL' ? (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-500">
                           <Package size={12} className="mr-1" />
                           Manual

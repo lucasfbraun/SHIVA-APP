@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Calendar, FileText, Filter, Package, Search, X } from 'lucide-react';
+import { TrendingUp, Calendar, FileText, Filter, Package, Search, X, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { estoqueService, EntradaEstoque } from '@/services/estoqueService';
 import { produtoService } from '@/services/produtoService';
 import { Produto } from '@/types';
@@ -10,6 +10,7 @@ export default function RelatorioEstoque() {
   const [entradas, setEntradas] = useState<EntradaEstoque[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState<'TODOS' | 'MANUAL' | 'OCR'>('TODOS');
+  const [filtroMovimento, setFiltroMovimento] = useState<'TODOS' | 'ENTRADA' | 'SAIDA'>('TODOS');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [produtoId, setProdutoId] = useState('');
@@ -25,7 +26,7 @@ export default function RelatorioEstoque() {
 
   useEffect(() => {
     loadEntradas();
-  }, [filtroTipo, dataInicio, dataFim, produtoId]);
+  }, [filtroTipo, filtroMovimento, dataInicio, dataFim, produtoId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -55,6 +56,10 @@ export default function RelatorioEstoque() {
         filtros.tipoEntrada = filtroTipo;
       }
       
+      if (filtroMovimento !== 'TODOS') {
+        filtros.tipoMovimento = filtroMovimento;
+      }
+      
       if (dataInicio) {
         filtros.dataInicio = dataInicio;
       }
@@ -79,11 +84,11 @@ export default function RelatorioEstoque() {
   const entradasManuais = entradas.filter(e => e.tipoEntrada === 'MANUAL');
   const entradasOCR = entradas.filter(e => e.tipoEntrada === 'OCR');
   
-  const totalQuantidade = entradas.reduce((acc, e) => acc + e.quantidade, 0);
   const totalValor = entradas.reduce((acc, e) => acc + (e.quantidade * e.custoUnitario), 0);
 
   const limparFiltros = () => {
     setFiltroTipo('TODOS');
+    setFiltroMovimento('TODOS');
     setDataInicio('');
     setDataFim('');
     setProdutoId('');
@@ -187,7 +192,7 @@ export default function RelatorioEstoque() {
           </div>
 
           {/* Segunda linha - Outros filtros */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {/* Tipo de Entrada */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
@@ -201,6 +206,22 @@ export default function RelatorioEstoque() {
                 <option value="TODOS">Todos</option>
                 <option value="MANUAL">Movimento Manual</option>
                 <option value="OCR">OCR Cupom</option>
+              </select>
+            </div>
+
+            {/* Tipo de Movimento */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Tipo de Movimento
+              </label>
+              <select
+                value={filtroMovimento}
+                onChange={(e) => setFiltroMovimento(e.target.value as any)}
+                className="input-primary"
+              >
+                <option value="TODOS">Todos</option>
+                <option value="ENTRADA">Entrada</option>
+                <option value="SAIDA">Saída</option>
               </select>
             </div>
 
@@ -308,6 +329,7 @@ export default function RelatorioEstoque() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Qtd</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Custo Unit.</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Total</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Movimento</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Tipo</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Nº Cupom</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Observação</th>
@@ -342,6 +364,19 @@ export default function RelatorioEstoque() {
                       <span className="text-sm font-medium text-text-primary">
                         R$ {(entrada.quantidade * entrada.custoUnitario).toFixed(2)}
                       </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      {entrada.tipoMovimento === 'ENTRADA' ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-action/10 text-green-action">
+                          <ArrowDownCircle size={12} className="mr-1" />
+                          Entrada
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-action/10 text-red-action">
+                          <ArrowUpCircle size={12} className="mr-1" />
+                          Saída
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       {entrada.tipoEntrada === 'MANUAL' ? (

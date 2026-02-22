@@ -8,6 +8,7 @@ export interface EntradaEstoque {
   dataEntrada: string;
   numeroCupom: string | null;
   tipoEntrada: 'MANUAL' | 'OCR';
+  tipoMovimento: 'ENTRADA' | 'SAIDA';
   observacao: string | null;
   criadoEm: string;
   produto: {
@@ -23,12 +24,14 @@ export const estoqueService = {
   async getEntradas(filtros?: {
     produtoId?: string;
     tipoEntrada?: 'MANUAL' | 'OCR';
+    tipoMovimento?: 'ENTRADA' | 'SAIDA';
     dataInicio?: string;
     dataFim?: string;
   }) {
     const params = new URLSearchParams();
     if (filtros?.produtoId) params.append('produtoId', filtros.produtoId);
     if (filtros?.tipoEntrada) params.append('tipoEntrada', filtros.tipoEntrada);
+    if (filtros?.tipoMovimento) params.append('tipoMovimento', filtros.tipoMovimento);
     if (filtros?.dataInicio) params.append('dataInicio', filtros.dataInicio);
     if (filtros?.dataFim) params.append('dataFim', filtros.dataFim);
     

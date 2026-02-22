@@ -260,7 +260,7 @@ router.put('/manual/:produtoId', async (req: Request, res: Response) => {
 // GET - Listar todas as entradas de estoque (com filtros)
 router.get('/entradas', async (req: Request, res: Response) => {
   try {
-    const { produtoId, tipoEntrada, dataInicio, dataFim } = req.query;
+    const { produtoId, tipoEntrada, dataInicio, dataFim, tipoMovimento } = req.query;
     
     const where: any = {};
     
@@ -270,6 +270,10 @@ router.get('/entradas', async (req: Request, res: Response) => {
     
     if (tipoEntrada) {
       where.tipoEntrada = String(tipoEntrada).toUpperCase();
+    }
+    
+    if (tipoMovimento) {
+      where.tipoMovimento = String(tipoMovimento).toUpperCase();
     }
     
     if (dataInicio || dataFim) {
