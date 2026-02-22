@@ -52,6 +52,11 @@ export default function MovimentoEstoque() {
       return;
     }
 
+    if (!Number.isInteger(qtd)) {
+      alert('Quantidade deve ser um número inteiro');
+      return;
+    }
+
     if (!custo || custo < 0) {
       alert('Custo unitário deve ser informado');
       return;
@@ -230,14 +235,15 @@ export default function MovimentoEstoque() {
                 </label>
                 <input
                   type="number"
-                  step="0.01"
-                  min="0.01"
+                  step="1"
+                  min="1"
                   value={quantidade}
                   onChange={(e) => setQuantidade(e.target.value)}
                   className="input w-full"
                   placeholder="Ex: 10"
                   required
                 />
+                <p className="text-xs text-text-secondary mt-1">Apenas valores inteiros</p>
               </div>
 
               {/* Custo Unitário */}

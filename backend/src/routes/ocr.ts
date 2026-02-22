@@ -192,6 +192,12 @@ router.post('/confirmar-entrada', async (req: Request, res: Response) => {
         const qtd = parseFloat(quantidade);
         const custo = parseFloat(custoUnitario);
         
+        // Validar quantidade inteira
+        if (!Number.isInteger(qtd)) {
+          resultados.push({ produtoId, erro: 'Quantidade deve ser um número inteiro' });
+          continue;
+        }
+        
         const novoCustoMedio = estoqueAtual === 0
           ? custo
           : ((estoqueAtual * custoMedioAtual) + (qtd * custo)) / (estoqueAtual + qtd);

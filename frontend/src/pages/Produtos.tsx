@@ -281,8 +281,8 @@ export default function Produtos() {
                 </label>
                 <input
                   type="number"
-                  step="0.01"
-                  min="0.01"
+                  step="1"
+                  min="1"
                   value={quantidade}
                   onChange={(e) => setQuantidade(e.target.value)}
                   className="input w-full"
@@ -290,6 +290,7 @@ export default function Produtos() {
                   autoFocus
                   required
                 />
+                <p className="text-xs text-text-secondary mt-1">Apenas valores inteiros</p>
               </div>
 
               <div>

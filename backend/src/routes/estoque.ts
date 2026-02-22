@@ -46,6 +46,10 @@ router.post('/entrada', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Quantidade e custo devem ser positivos' });
     }
     
+    if (!Number.isInteger(qtd)) {
+      return res.status(400).json({ error: 'Quantidade deve ser um número inteiro' });
+    }
+    
     // Buscar produto e estoque atual
     const produto = await prisma.produto.findUnique({
       where: { id: produtoId },
