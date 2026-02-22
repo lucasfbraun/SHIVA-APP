@@ -96,8 +96,24 @@ export default function EngenhariaModal({ produtoId, produtoNome, custoMedio, on
     }
   };
 
+
+  const calcularCustoComponente = (comp: ComponenteEngenharia) => {
+    const unidade = comp.componente?.unidadeMedida || 'UN';
+    const quantidade = comp.quantidade;
+    const custoMedio = comp.componente?.custoMedio || 0;
+    const quantidadeRef = comp.componente?.quantidadeRefCalculo || 1;
+    
+    if (unidade === 'UN') {
+      // Para unidades simples, multiplicar normalmente
+      return quantidade * custoMedio;
+    } else {
+      // Para G, ML, L - aplicar regra de 3
+      return (quantidade * custoMedio) / quantidadeRef;
+    }
+  };
+
   const custoTotal = componentes.reduce((acc, comp) => {
-    return acc + ((comp.componente?.custoMedio || 0) * comp.quantidade);
+    return acc + calcularCustoComponente(comp);
   }, 0);
 
   if (loading) {
@@ -211,7 +227,7 @@ export default function EngenhariaModal({ produtoId, produtoNome, custoMedio, on
                         R$ {(comp.componente?.custoMedio || 0).toFixed(2)}
                       </td>
                       <td className="py-3 px-4 text-text-primary text-right font-semibold">
-                        R$ {((comp.componente?.custoMedio || 0) * comp.quantidade).toFixed(2)}
+                        R$ {calcularCustoComponente(comp).toFixed(2)}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <button

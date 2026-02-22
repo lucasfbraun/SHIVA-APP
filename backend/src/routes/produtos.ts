@@ -413,7 +413,9 @@ router.get('/:id/engenharia', async (req: Request, res: Response) => {
             nome: true,
             custoMedio: true,
             codigoInterno: true,
-            categoria: true
+            categoria: true,
+            unidadeMedida: true,
+            quantidadeRefCalculo: true
           }
         }
       }
@@ -462,7 +464,9 @@ router.post('/:id/engenharia', async (req: Request, res: Response) => {
             nome: true,
             custoMedio: true,
             codigoInterno: true,
-            categoria: true
+            categoria: true,
+            unidadeMedida: true,
+            quantidadeRefCalculo: true
           }
         }
       }
@@ -496,15 +500,31 @@ router.post('/:id/engenharia/calcular-custo', async (req: Request, res: Response
   try {
     const { id } = req.params;
 
-    // Buscar todos os componentes da engenharia
+    // Buscar todos os componentes da engenharia com campos necessários
     const engenharia = await prisma.engenhariaProduto.findMany({
       where: { produtoId: id },
-      include: { componente: true }
+      include: {
+        componente: {
+          select: {
+            id: true,
+            nome: true,
+            custoMedio: true,
+            codigoInterno: true,
+            unidadeMedida: true,
+            quantidadeRefCalculo: true
+          }
+        }
+      }
     });
 
-    // Calcular custo total
+    // Calcular custo total com a lógica correta
     const custoTotal = engenharia.reduce((acc, item) => {
-      return acc + (item.componente.custoMedio * item.quantidade);
+      if (item.componente.unidadeMedida === 'UN') {
+        return acc + (item.componente.custoMedio * item.quantidade);
+      } else {
+        // Para G, ML, L - usar regra de 3
+        return acc + ((item.componente.custoMedio * item.quantidade) / (item.componente.quantidadeRefCalculo || 1));
+      }
     }, 0);
 
     // Atualizar o custo médio do produto
@@ -520,8 +540,12 @@ router.post('/:id/engenharia/calcular-custo', async (req: Request, res: Response
       detalhes: engenharia.map(e => ({
         componente: e.componente.nome,
         quantidade: e.quantidade,
+        unidade: e.componente.unidadeMedida,
+        quantidadeRef: e.componente.quantidadeRefCalculo,
         custoUnitario: e.componente.custoMedio,
-        subtotal: e.componente.custoMedio * e.quantidade
+        subtotal: e.componente.unidadeMedida === 'UN'
+          ? e.componente.custoMedio * e.quantidade
+          : (e.componente.custoMedio * e.quantidade) / (e.componente.quantidadeRefCalculo || 1)
       }))
     });
   } catch (error) {
