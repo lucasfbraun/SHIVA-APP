@@ -24,6 +24,7 @@ export default function ProdutoForm() {
     precoVenda: '',
     markup: '100',
     controlaEstoque: true,
+    ativo: true,
   });
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function ProdutoForm() {
         precoVenda: produto.precoVenda.toString(),
         markup: produto.markup?.toString() || '100',
         controlaEstoque: produto.controlaEstoque !== undefined ? produto.controlaEstoque : true,
+        ativo: produto.ativo !== undefined ? produto.ativo : true,
       });
       if (produto.imagemUrl) {
         setPreviewImage(produto.imagemUrl);
@@ -108,6 +110,7 @@ export default function ProdutoForm() {
       data.append('precoVenda', formData.precoVenda);
       data.append('markup', formData.markup || '0');
       data.append('controlaEstoque', String(formData.controlaEstoque));
+      data.append('ativo', String(formData.ativo));
 
       if (imageFile) {
         data.append('imagem', imageFile);
@@ -294,6 +297,21 @@ export default function ProdutoForm() {
               <div>
                 <span className="text-sm font-medium text-text-primary block">Controla Estoque</span>
                 <span className="text-xs text-text-secondary">Quando ativo, o produto aparecerá na tela de Movimento de Estoque</span>
+              </div>
+            </label>
+          </div>
+
+          <div>
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.ativo}
+                onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+                className="w-5 h-5 rounded border-purple-primary/30 bg-background-primary text-purple-primary focus:ring-purple-primary focus:ring-2"
+              />
+              <div>
+                <span className="text-sm font-medium text-text-primary block">Produto Ativo</span>
+                <span className="text-xs text-text-secondary">Produtos inativos não aparecem na venda mas continuam no sistema</span>
               </div>
             </label>
           </div>

@@ -86,7 +86,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST - Criar produto
 router.post('/', upload.single('imagem'), async (req: Request, res: Response) => {
   try {
-    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, controlaEstoque } = req.body;
+    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, controlaEstoque, ativo } = req.body;
     
     // Validações
     if (!nome || !precoVenda) {
@@ -116,6 +116,7 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
         precoVenda: precoFinal,
         markup: markup ? parseFloat(markup) : 0,
         controlaEstoque: controlaEstoque === 'true' || controlaEstoque === true,
+        ativo: ativo !== undefined ? (ativo === 'true' || ativo === true) : true,
         imagemUrl,
         estoque: {
           create: {
@@ -190,6 +191,36 @@ router.delete('/:id', async (req: Request, res: Response) => {
     res.json({ message: 'Produto desativado com sucesso', produto });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao deletar produto' });
+  }
+});
+
+// PATCH - Alternar status ativo/inativo
+router.patch('/:id/toggle-status', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Buscar produto atual
+    const produtoAtual = await prisma.produto.findUnique({
+      where: { id }
+    });
+    
+    if (!produtoAtual) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+    
+    // Alternar status
+    const produto = await prisma.produto.update({
+      where: { id },
+      data: { ativo: !produtoAtual.ativo },
+      include: { estoque: true }
+    });
+    
+    res.json({ 
+      message: produto.ativo ? 'Produto ativado com sucesso' : 'Produto desativado com sucesso',
+      produto 
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao alterar status do produto' });
   }
 });
 

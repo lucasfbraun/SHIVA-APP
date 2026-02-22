@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Package, PackagePlus, RefreshCw } from 'lucide-react';
+import { Plus, Search, Edit, Power, Trash2, Package, PackagePlus, RefreshCw } from 'lucide-react';
 import { produtoService } from '@/services/produtoService';
 import { Produto } from '@/types';
 import api from '@/services/api';
@@ -34,8 +34,21 @@ export default function Produtos() {
     }
   };
 
+  const handleToggleStatus = async (produto: Produto) => {
+    const acao = produto.ativo ? 'desativar' : 'ativar';
+    if (!confirm(`Deseja realmente ${acao} o produto "${produto.nome}"?`)) return;
+    
+    try {
+      await api.patch(`/produtos/${produto.id}/toggle-status`);
+      loadProdutos();
+    } catch (error) {
+      console.error('Erro ao alterar status do produto:', error);
+      alert('Erro ao alterar status do produto');
+    }
+  };
+
   const handleDelete = async (id: string) => {
-    if (!confirm('Deseja realmente desativar este produto?')) return;
+    if (!confirm('Deseja realmente DELETAR permanentemente este produto?\n\nATENÇÃO: Esta ação não pode ser desfeita!')) return;
     
     try {
       await produtoService.delete(id);
@@ -210,11 +223,13 @@ export default function Produtos() {
                       <p className="text-sm text-text-secondary">{produto.categoria}</p>
                     )}
                   </div>
-                  {!produto.ativo && (
-                    <span className="px-2 py-1 bg-red-action/20 text-red-400 text-xs rounded">
-                      Inativo
-                    </span>
-                  )}
+                  <span className={`px-2 py-1 text-xs rounded font-medium ${
+                    produto.ativo
+                      ? 'bg-green-500/20 text-green-400'
+                      : 'bg-red-action/20 text-red-400'
+                  }`}>
+                    {produto.ativo ? 'Ativo' : 'Inativo'}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-purple-primary/20">
@@ -252,11 +267,22 @@ export default function Produtos() {
                     <Edit size={16} />
                   </Link>
                   <button
+                    onClick={() => handleToggleStatus(produto)}
+                    className={`btn-secondary py-2 px-3 text-sm ${
+                      produto.ativo
+                        ? 'hover:bg-yellow-500/10 hover:border-yellow-500'
+                        : 'hover:bg-green-500/10 hover:border-green-500'
+                    }`}
+                    title={produto.ativo ? 'Desativar produto' : 'Ativar produto'}
+                  >
+                    <Power size={16} className={produto.ativo ? 'text-yellow-500' : 'text-green-500'} />
+                  </button>
+                  <button
                     onClick={() => handleDelete(produto.id)}
                     className="btn-secondary py-2 px-3 text-sm hover:bg-red-action/10 hover:border-red-action"
-                    title="Desativar produto"
+                    title="Deletar produto permanentemente"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={16} className="text-red-action" />
                   </button>
                 </div>
               </div>
