@@ -17,6 +17,7 @@ export default function Relatorios() {
   // Vendas
   const [mesVendas, setMesVendas] = useState(new Date().getMonth() + 1);
   const [anoVendas, setAnoVendas] = useState(new Date().getFullYear());
+  const [todosMesesVendas, setTodosMesesVendas] = useState(false);
   const [ticketMedio, setTicketMedio] = useState<any>(null);
   const [topProdutos, setTopProdutos] = useState<any[]>([]);
   const [margemLucro, setMargemLucro] = useState<any>(null);
@@ -53,7 +54,7 @@ export default function Relatorios() {
     } else if (abaSelecionada === 'estoque') {
       loadRelatorioEstoque();
     }
-  }, [abaSelecionada, mesVendas, anoVendas, mes, ano, filtroTipo, filtroMovimento, dataInicio, dataFim, produtoId]);
+  }, [abaSelecionada, mesVendas, anoVendas, todosMesesVendas, mes, ano, filtroTipo, filtroMovimento, dataInicio, dataFim, produtoId]);
 
   const loadProdutos = async () => {
     try {
@@ -69,11 +70,21 @@ export default function Relatorios() {
       setLoading(true);
       console.log('🔄 Iniciando loadRelatorioVendas...');
       
-      // Definir início e fim do mês selecionado
-      const dataInicio = new Date(anoVendas, mesVendas - 1, 1);
-      dataInicio.setHours(0, 0, 0, 0);
+      // Definir início e fim do período
+      let dataInicio: Date;
+      let dataFim: Date;
       
-      const dataFim = new Date(anoVendas, mesVendas, 0);
+      if (todosMesesVendas) {
+        // Todos os meses do ano
+        dataInicio = new Date(anoVendas, 0, 1);
+        dataFim = new Date(anoVendas, 11, 31);
+      } else {
+        // Mês específico
+        dataInicio = new Date(anoVendas, mesVendas - 1, 1);
+        dataFim = new Date(anoVendas, mesVendas, 0);
+      }
+      
+      dataInicio.setHours(0, 0, 0, 0);
       dataFim.setHours(23, 59, 59, 999);
 
       console.log('Mês/Ano selecionado:', mesVendas, anoVendas);
@@ -251,6 +262,8 @@ export default function Relatorios() {
           setMesVendas={setMesVendas}
           anoVendas={anoVendas}
           setAnoVendas={setAnoVendas}
+          todosMesesVendas={todosMesesVendas}
+          setTodosMesesVendas={setTodosMesesVendas}
           ticketMedio={ticketMedio}
           topProdutos={topProdutos}
           topClientes={topClientes}
@@ -295,20 +308,40 @@ export default function Relatorios() {
 }
 
 // Componente de Relatório de Vendas
-function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, ticketMedio, topProdutos, topClientes, margemLucro, resumo, dadosMensais, getMesNome }: any) {
+function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, todosMesesVendas, setTodosMesesVendas, ticketMedio, topProdutos, topClientes, margemLucro, resumo, dadosMensais, getMesNome }: any) {
   console.log('📋 RelatorioVendas renderizando');
   console.log('📋 dadosMensais prop:', dadosMensais);
   console.log('📋 Tipo de dadosMensais:', typeof dadosMensais);
   console.log('📋 É array?:', Array.isArray(dadosMensais));
   console.log('📋 Comprimento:', dadosMensais?.length);
+  
+  const getPeriodoTexto = () => {
+    if (todosMesesVendas) {
+      return `Todos os Meses de ${anoVendas}`;
+    }
+    return `${getMesNome(mesVendas)} de ${anoVendas}`;
+  };
   return (
     <div className="space-y-6">
       {/* Filtros de Mês e Ano */}
-      <div className="flex gap-2 justify-end">
+      <div className="flex gap-2 justify-end items-center flex-wrap">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="todosMeses"
+            checked={todosMesesVendas}
+            onChange={(e) => setTodosMesesVendas(e.target.checked)}
+            className="cursor-pointer w-4 h-4 rounded"
+          />
+          <label htmlFor="todosMeses" className="text-sm text-text-primary cursor-pointer">
+            Todos os Meses
+          </label>
+        </div>
         <select
           value={mesVendas}
           onChange={(e) => setMesVendas(parseInt(e.target.value))}
           className="input py-2 px-3 text-sm"
+          disabled={todosMesesVendas}
         >
           {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
             <option key={m} value={m}>{getMesNome(m)}</option>
@@ -335,7 +368,7 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tic
           <div className="text-3xl font-bold text-purple-primary">
             R$ {resumo?.faturamentoTotal?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
         </div>
 
         <div key="custos" className="card shadow-lg hover:shadow-xl hover:shadow-orange-500/20 transition">
@@ -346,7 +379,7 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tic
           <div className="text-3xl font-bold text-orange-500">
             R$ {resumo?.custoTotal?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
         </div>
 
         <div key="despesas" className="card shadow-lg hover:shadow-xl hover:shadow-red-500/20 transition">
@@ -357,7 +390,7 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tic
           <div className="text-3xl font-bold text-red-500">
             R$ {resumo?.despesasTotal?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
         </div>
 
         <div key="ticket" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
@@ -368,7 +401,7 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tic
           <div className="text-3xl font-bold text-purple-primary">
             R$ {ticketMedio?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
         </div>
 
         <div key="lucro" className="card shadow-lg hover:shadow-xl hover:shadow-green-500/20 transition">
@@ -379,7 +412,7 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tic
           <div className="text-3xl font-bold text-green-500">
             R$ {resumo?.lucroLiquido?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
         </div>
       </div>
 
@@ -393,7 +426,7 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tic
           <div className="text-3xl font-bold text-blue-500">
             {resumo?.margemGrossa?.toFixed(1) || '0'}%
           </div>
-          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
           <p className="text-text-secondary text-xs mt-1">Sobre vendas (sem despesas)</p>
         </div>
 
@@ -405,7 +438,7 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tic
           <div className="text-3xl font-bold text-green-500">
             {resumo?.margemLiquida?.toFixed(1) || '0'}%
           </div>
-          <p className="text-text-secondary text-xs mt-2">{getMesNome(mesVendas)} de {anoVendas}</p>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
           <p className="text-text-secondary text-xs mt-1">Sobre vendas (com despesas)</p>
         </div>
       </div>
