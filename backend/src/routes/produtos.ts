@@ -178,6 +178,43 @@ router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) 
   }
 });
 
+// GET - Verificar se produto pode ser deletado
+router.get('/:id/pode-deletar', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar se produto existe
+    const produto = await prisma.produto.findUnique({
+      where: { id },
+      include: {
+        entradasEstoque: true,
+        itensComanda: true
+      }
+    });
+    
+    if (!produto) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+    
+    const temEntradas = produto.entradasEstoque.length > 0;
+    const temVendas = produto.itensComanda.length > 0;
+    
+    const podeDeletar = !temEntradas && !temVendas;
+    
+    res.json({
+      podeDeletar,
+      motivos: {
+        temEntradas,
+        temVendas,
+        quantidadeEntradas: produto.entradasEstoque.length,
+        quantidadeVendas: produto.itensComanda.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao verificar produto' });
+  }
+});
+
 // DELETE - Deletar produto (soft delete)
 router.delete('/:id', async (req: Request, res: Response) => {
   try {

@@ -48,11 +48,34 @@ export default function Produtos() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Deseja realmente DELETAR permanentemente este produto?\n\nATENÇÃO: Esta ação não pode ser desfeita!')) return;
-    
     try {
+      // Verificar se pode deletar
+      const response = await api.get(`/produtos/${id}/pode-deletar`);
+      const { podeDeletar, motivos } = response.data;
+      
+      if (!podeDeletar) {
+        let mensagem = 'Não é possível deletar este produto!\n\n';
+        mensagem += 'O produto possui vínculos que impedem a exclusão:\n\n';
+        
+        if (motivos.temEntradas) {
+          mensagem += `• ${motivos.quantidadeEntradas} movimento(s) de estoque registrado(s)\n`;
+        }
+        if (motivos.temVendas) {
+          mensagem += `• ${motivos.quantidadeVendas} venda(s) em comanda(s)\n`;
+        }
+        
+        mensagem += '\n💡 Sugestão: Use o botão ⚡ (Desativar) para ocultar o produto sem deletá-lo.';
+        
+        alert(mensagem);
+        return;
+      }
+      
+      // Se pode deletar, pedir confirmação
+      if (!confirm('Deseja realmente DELETAR permanentemente este produto?\n\nATENÇÃO: Esta ação não pode ser desfeita!')) return;
+      
       await produtoService.delete(id);
       loadProdutos();
+      alert('Produto deletado com sucesso!');
     } catch (error) {
       console.error('Erro ao deletar produto:', error);
       alert('Erro ao deletar produto');
