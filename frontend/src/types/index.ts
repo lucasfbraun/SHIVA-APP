@@ -6,6 +6,7 @@ export interface Produto {
   codigoInterno?: string;
   codigoBarras?: string;
   unidadeMedida?: string;
+  quantidadeRefCalculo?: number;
   custoMedio: number;
   precoVenda: number;
   imagemUrl?: string;

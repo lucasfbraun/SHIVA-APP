@@ -24,6 +24,7 @@ export default function ProdutoForm() {
     codigoInterno: '',
     codigoBarras: '',
     unidadeMedida: 'UN',
+    quantidadeRefCalculo: '1',
     custoMedio: '',
     precoVenda: '',
     markup: '100',
@@ -49,6 +50,7 @@ export default function ProdutoForm() {
         codigoInterno: produto.codigoInterno || '',
         codigoBarras: produto.codigoBarras || '',
         unidadeMedida: produto.unidadeMedida || 'UN',
+        quantidadeRefCalculo: (produto.quantidadeRefCalculo || 1).toString(),
         custoMedio: produto.custoMedio.toString(),
         precoVenda: produto.precoVenda.toString(),
         markup: produto.markup?.toString() || '100',
@@ -85,6 +87,26 @@ export default function ProdutoForm() {
     setPreviewImage(null);
     setImageFile(null);
     setImageRemoved(true);
+  };
+
+  const getQuantidadeSugerida = (unidade: string): string => {
+    const sugestoes: { [key: string]: string } = {
+      'UN': '1',
+      'KG': '1',
+      'G': '50',
+      'ML': '100',
+      'L': '1'
+    };
+    return sugestoes[unidade] || '1';
+  };
+
+  const handleUnidadeChange = (novaUnidade: string) => {
+    const quantidadeSugerida = getQuantidadeSugerida(novaUnidade);
+    setFormData({
+      ...formData,
+      unidadeMedida: novaUnidade,
+      quantidadeRefCalculo: quantidadeSugerida
+    });
   };
 
   const calcularPrecoSugerido = async () => {
@@ -125,6 +147,7 @@ export default function ProdutoForm() {
       data.append('codigoInterno', formData.codigoInterno);
       data.append('codigoBarras', formData.codigoBarras);
       data.append('unidadeMedida', formData.unidadeMedida);
+      data.append('quantidadeRefCalculo', formData.quantidadeRefCalculo || '1');
       data.append('custoMedio', formData.custoMedio || '0');
       data.append('precoVenda', formData.precoVenda);
       data.append('markup', formData.markup || '0');
@@ -326,7 +349,7 @@ export default function ProdutoForm() {
             </label>
             <select
               value={formData.unidadeMedida}
-              onChange={(e) => setFormData({ ...formData, unidadeMedida: e.target.value })}
+              onChange={(e) => handleUnidadeChange(e.target.value)}
               className="input w-full"
             >
               <option value="UN">UN - Unidade</option>
@@ -335,6 +358,25 @@ export default function ProdutoForm() {
               <option value="ML">ML - Mililitro</option>
               <option value="L">L - Litro</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Quantidade para Referência de Cálculo de Custo
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0.01"
+              value={formData.quantidadeRefCalculo}
+              onChange={(e) => setFormData({ ...formData, quantidadeRefCalculo: e.target.value })}
+              className="input w-full"
+              placeholder="Ex: 1, 100"
+            />
+            <p className="text-xs text-text-secondary mt-1">
+              Sugestão automática baseada na unidade
+            </p>
           </div>
 
           <div>

@@ -27,6 +27,7 @@ model Produto {
   codigoInterno   String?  @unique
   codigoBarras    String?
   unidadeMedida   String   @default("UN") // UN, KG, G, ML, L
+  quantidadeRefCalculo Float @default(1) // Quantidade para referência de cálculo de custo
   custoMedio      Float    @default(0)
   precoVenda      Float
   imagemUrl       String?
