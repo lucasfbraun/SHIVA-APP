@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter, Search, X, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter, Search, X, ArrowDownCircle, ArrowUpCircle, Download } from 'lucide-react';
 import { relatorioService } from '@/services/relatorioService';
 import { despesaService } from '@/services/despesaService';
 import { estoqueService, EntradaEstoque } from '@/services/estoqueService';
@@ -8,6 +8,7 @@ import { Produto } from '@/types';
 import { GraficoFaturamentoVsDespesasVsLucro, GraficoMargensBrutaVsLiquida } from '@/components/GraficosRelatorio';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
 
 export default function Relatorios() {
   const [abaSelecionada, setAbaSelecionada] = useState<'vendas' | 'despesas' | 'estoque'>('vendas');
@@ -589,6 +590,53 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
     setBuscaProduto('');
   };
 
+  const exportarParaExcel = () => {
+    if (entradas.length === 0) {
+      alert('Nenhum dado para exportar');
+      return;
+    }
+
+    // Preparar dados para Excel
+    const dados = entradas.map((entrada) => ({
+      'Data': format(new Date(entrada.dataEntrada), 'dd/MM/yyyy', { locale: ptBR }),
+      'Produto': entrada.produto.nome,
+      'Código Interno': entrada.produto.codigoInterno || '-',
+      'Categoria': entrada.produto.categoria || '-',
+      'Quantidade': entrada.quantidade,
+      'Custo Unitário': parseFloat(entrada.custoUnitario.toFixed(2)),
+      'Total': parseFloat((entrada.quantidade * entrada.custoUnitario).toFixed(2)),
+      'Movimento': entrada.tipoMovimento === 'ENTRADA' ? 'Entrada' : 'Saída',
+      'Tipo': entrada.tipoEntrada === 'MANUAL' ? 'Manual' : 'OCR',
+      'Nº Cupom': entrada.numeroCupom || '-',
+      'Observação': entrada.observacao || '-'
+    }));
+
+    // Criar workbook
+    const ws = XLSX.utils.json_to_sheet(dados);
+    
+    // Adicionar formatação às colunas
+    ws['!cols'] = [
+      { wch: 12 }, // Data
+      { wch: 20 }, // Produto
+      { wch: 15 }, // Código Interno
+      { wch: 15 }, // Categoria
+      { wch: 12 }, // Quantidade
+      { wch: 15 }, // Custo Unitário
+      { wch: 15 }, // Total
+      { wch: 12 }, // Movimento
+      { wch: 10 }, // Tipo
+      { wch: 12 }, // Nº Cupom
+      { wch: 20 }  // Observação
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Movimentações');
+
+    // Baixar arquivo
+    const nomeArquivo = `Movimentacoes_Estoque_${format(new Date(), 'dd_MM_yyyy_HHmmss')}.xlsx`;
+    XLSX.writeFile(wb, nomeArquivo);
+  };
+
   return (
     <div className="space-y-6">
       {/* Filtros */}
@@ -768,9 +816,20 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
 
       {/* Tabela de Entradas */}
       <div className="card overflow-hidden">
-        <h2 className="font-semibold text-text-primary mb-4">
-          Histórico de Entradas ({entradas.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-text-primary">
+            Histórico de Entradas ({entradas.length})
+          </h2>
+          <button
+            onClick={exportarParaExcel}
+            disabled={entradas.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-500 disabled:cursor-not-allowed text-white rounded-lg transition font-medium text-sm"
+            title="Exportar dados para Excel"
+          >
+            <Download size={16} />
+            Exportar Excel
+          </button>
+        </div>
 
         {entradas.length === 0 ? (
           <div className="text-center py-8 text-text-secondary">
