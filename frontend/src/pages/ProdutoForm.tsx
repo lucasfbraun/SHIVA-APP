@@ -23,6 +23,7 @@ export default function ProdutoForm() {
     categoria: '',
     codigoInterno: '',
     codigoBarras: '',
+    unidadeMedida: 'UN',
     custoMedio: '',
     precoVenda: '',
     markup: '100',
@@ -47,6 +48,7 @@ export default function ProdutoForm() {
         categoria: produto.categoria || '',
         codigoInterno: produto.codigoInterno || '',
         codigoBarras: produto.codigoBarras || '',
+        unidadeMedida: produto.unidadeMedida || 'UN',
         custoMedio: produto.custoMedio.toString(),
         precoVenda: produto.precoVenda.toString(),
         markup: produto.markup?.toString() || '100',
@@ -122,6 +124,7 @@ export default function ProdutoForm() {
       data.append('categoria', formData.categoria);
       data.append('codigoInterno', formData.codigoInterno);
       data.append('codigoBarras', formData.codigoBarras);
+      data.append('unidadeMedida', formData.unidadeMedida);
       data.append('custoMedio', formData.custoMedio || '0');
       data.append('precoVenda', formData.precoVenda);
       data.append('markup', formData.markup || '0');
@@ -315,6 +318,23 @@ export default function ProdutoForm() {
               className="input w-full"
               placeholder="Ex: 7894900011517"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Unidade de Medida
+            </label>
+            <select
+              value={formData.unidadeMedida}
+              onChange={(e) => setFormData({ ...formData, unidadeMedida: e.target.value })}
+              className="input w-full"
+            >
+              <option value="UN">UN - Unidade</option>
+              <option value="KG">KG - Quilograma</option>
+              <option value="G">G - Grama</option>
+              <option value="ML">ML - Mililitro</option>
+              <option value="L">L - Litro</option>
+            </select>
           </div>
 
           <div>

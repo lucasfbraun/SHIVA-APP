@@ -26,6 +26,7 @@ model Produto {
   categoria       String?
   codigoInterno   String?  @unique
   codigoBarras    String?
+  unidadeMedida   String   @default("UN") // UN, KG, G, ML, L
   custoMedio      Float    @default(0)
   precoVenda      Float
   imagemUrl       String?

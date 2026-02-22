@@ -87,7 +87,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST - Criar produto
 router.post('/', upload.single('imagem'), async (req: Request, res: Response) => {
   try {
-    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, controlaEstoque, ativo, tipo } = req.body;
+    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, controlaEstoque, ativo, tipo, unidadeMedida } = req.body;
     
     // Validações
     if (!nome || !precoVenda) {
@@ -120,6 +120,7 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
         controlaEstoque: controlaEstoque === 'true' || controlaEstoque === true,
         ativo: ativo !== undefined ? (ativo === 'true' || ativo === true) : true,
         imagemUrl,
+        unidadeMedida: unidadeMedida || 'UN',
         estoque: {
           create: {
             quantidade: 0
@@ -139,7 +140,7 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
 router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, ativo, controlaEstoque, tipo, removerImagem } = req.body;
+    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, ativo, controlaEstoque, tipo, removerImagem, unidadeMedida } = req.body;
     
     const produtoExistente = await prisma.produto.findUnique({ where: { id } });
     if (!produtoExistente) {
@@ -182,6 +183,7 @@ router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) 
         ...(tipo && { tipo }),
         ...(ativo !== undefined && { ativo: ativo === 'true' }),
         ...(controlaEstoque !== undefined && { controlaEstoque: controlaEstoque === 'true' || controlaEstoque === true }),
+        ...(unidadeMedida && { unidadeMedida }),
         imagemUrl
       },
       include: { estoque: true }

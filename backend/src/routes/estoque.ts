@@ -326,6 +326,11 @@ router.post('/recalcular', async (req: Request, res: Response) => {
     const resultados = [];
     
     for (const produto of produtos) {
+      // Buscar estoque anterior
+      const estoqueAnterior = await prisma.estoque.findUnique({
+        where: { produtoId: produto.id }
+      });
+      
       // Calcular total de entradas
       const entradas = await prisma.entradaEstoque.aggregate({
         where: { produtoId: produto.id },
@@ -363,7 +368,7 @@ router.post('/recalcular', async (req: Request, res: Response) => {
         nome: produto.nome,
         totalEntradas,
         totalSaidas,
-        estoqueAnterior: produto.estoque?.quantidade || 0,
+        estoqueAnterior: estoqueAnterior?.quantidade || 0,
         estoqueCorreto
       });
     }

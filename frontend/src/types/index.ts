@@ -5,6 +5,7 @@ export interface Produto {
   categoria?: string;
   codigoInterno?: string;
   codigoBarras?: string;
+  unidadeMedida?: string;
   custoMedio: number;
   precoVenda: number;
   imagemUrl?: string;
