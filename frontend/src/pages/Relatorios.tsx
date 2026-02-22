@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
-import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter, Search, X } from 'lucide-react';
 import { relatorioService } from '@/services/relatorioService';
 import { despesaService } from '@/services/despesaService';
 import { estoqueService, EntradaEstoque } from '@/services/estoqueService';
+import { produtoService } from '@/services/produtoService';
+import { Produto } from '@/types';
 import { GraficoFaturamentoVsDespesasVsLucro, GraficoMargensBrutaVsLiquida } from '@/components/GraficosRelatorio';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -31,6 +33,15 @@ export default function Relatorios() {
   const [filtroTipo, setFiltroTipo] = useState<'TODOS' | 'MANUAL' | 'OCR'>('TODOS');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+  const [produtoId, setProdutoId] = useState('');
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [buscaProduto, setBuscaProduto] = useState('');
+  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+
+  useEffect(() => {
+    loadProdutos();
+  }, []);
 
   useEffect(() => {
     if (abaSelecionada === 'vendas') {
@@ -40,7 +51,16 @@ export default function Relatorios() {
     } else if (abaSelecionada === 'estoque') {
       loadRelatorioEstoque();
     }
-  }, [abaSelecionada, mesVendas, anoVendas, mes, ano, filtroTipo, dataInicio, dataFim]);
+  }, [abaSelecionada, mesVendas, anoVendas, mes, ano, filtroTipo, dataInicio, dataFim, produtoId]);
+
+  const loadProdutos = async () => {
+    try {
+      const data = await produtoService.getAll();
+      setProdutos(data);
+    } catch (error) {
+      console.error('Erro ao carregar produtos:', error);
+    }
+  };
 
   const loadRelatorioVendas = async () => {
     try {
@@ -129,6 +149,10 @@ export default function Relatorios() {
       
       if (dataFim) {
         filtros.dataFim = dataFim;
+      }
+      
+      if (produtoId) {
+        filtros.produtoId = produtoId;
       }
       
       const data = await estoqueService.getEntradas(filtros);
@@ -247,6 +271,15 @@ export default function Relatorios() {
           setDataInicio={setDataInicio}
           dataFim={dataFim}
           setDataFim={setDataFim}
+          produtoId={produtoId}
+          setProdutoId={setProdutoId}
+          produtos={produtos}
+          buscaProduto={buscaProduto}
+          setBuscaProduto={setBuscaProduto}
+          produtoSelecionado={produtoSelecionado}
+          setProdutoSelecionado={setProdutoSelecionado}
+          mostrarSugestoes={mostrarSugestoes}
+          setMostrarSugestoes={setMostrarSugestoes}
         />
       )}
     </div>
@@ -503,7 +536,19 @@ function RelatorioDespesasContent({ mes, setMes, ano, setAno, resumoDespesas, ge
 }
 
 // Componente de Relatório de Estoque
-function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInicio, setDataInicio, dataFim, setDataFim }: any) {
+function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInicio, setDataInicio, dataFim, setDataFim, produtoId, setProdutoId, produtos, buscaProduto, setBuscaProduto, produtoSelecionado, setProdutoSelecionado, mostrarSugestoes, setMostrarSugestoes }: any) {
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setMostrarSugestoes(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const entradasManuais = entradas.filter((e: EntradaEstoque) => e.tipoEntrada === 'MANUAL');
   const entradasOCR = entradas.filter((e: EntradaEstoque) => e.tipoEntrada === 'OCR');
   
@@ -514,6 +559,26 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInic
     setFiltroTipo('TODOS');
     setDataInicio('');
     setDataFim('');
+    setProdutoId('');
+    setBuscaProduto('');
+    setProdutoSelecionado(null);
+  };
+
+  const produtosFiltrados = produtos.filter((p: Produto) => 
+    p.nome.toLowerCase().includes(buscaProduto.toLowerCase())
+  ).slice(0, 10);
+
+  const handleSelecionarProduto = (produto: Produto) => {
+    setProdutoSelecionado(produto);
+    setProdutoId(produto.id);
+    setBuscaProduto('');
+    setMostrarSugestoes(false);
+  };
+
+  const handleRemoverProduto = () => {
+    setProdutoSelecionado(null);
+    setProdutoId('');
+    setBuscaProduto('');
   };
 
   return (
@@ -525,8 +590,69 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInic
           <h2 className="font-semibold text-text-primary">Filtros</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Tipo de Entrada */}
+        <div className="space-y-16">
+          {/* Primeira linha - Busca de Produto */}
+          <div ref={searchRef} className="pb-8">
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Produto
+            </label>
+            {produtoSelecionado ? (
+              <div className="flex items-center gap-2 bg-purple-primary/10 border border-purple-primary/30 rounded-lg px-3 py-2.5">
+                <Package size={16} className="text-purple-primary" />
+                <span className="flex-1 text-sm text-text-primary">{produtoSelecionado.nome}</span>
+                <button
+                  onClick={handleRemoverProduto}
+                  className="text-text-secondary hover:text-red-500 transition"
+                  title="Remover filtro"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary" size={16} />
+                <input
+                  type="text"
+                  placeholder="Buscar produto..."
+                  value={buscaProduto}
+                  onChange={(e) => {
+                    setBuscaProduto(e.target.value);
+                    setMostrarSugestoes(true);
+                  }}
+                  onFocus={() => setMostrarSugestoes(true)}
+                  className="input py-2 px-3 pl-9 text-sm w-full"
+                />
+                {mostrarSugestoes && buscaProduto && produtosFiltrados.length > 0 && (
+                  <div className="absolute z-[100] w-full mt-1 bg-surface-secondary border border-purple-primary/30 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                    {produtosFiltrados.map((produto: Produto) => (
+                      <button
+                        key={produto.id}
+                        onClick={() => handleSelecionarProduto(produto)}
+                        className="w-full text-left px-3 py-2 hover:bg-purple-primary/10 transition flex items-center gap-2 border-b border-purple-primary/10 last:border-b-0"
+                      >
+                        <Package size={14} className="text-purple-primary" />
+                        <div>
+                          <div className="text-sm text-text-primary font-medium">{produto.nome}</div>
+                          {produto.categoria && (
+                            <div className="text-xs text-text-secondary">{produto.categoria}</div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {mostrarSugestoes && buscaProduto && produtosFiltrados.length === 0 && (
+                  <div className="absolute z-[100] w-full mt-1 bg-surface-secondary border border-purple-primary/30 rounded-lg shadow-xl p-3">
+                    <p className="text-sm text-text-secondary">Nenhum produto encontrado</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Segunda linha - Outros filtros */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Tipo de Entrada */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
               Tipo de Entrada
@@ -576,6 +702,7 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, dataInic
             >
               Limpar Filtros
             </button>
+          </div>
           </div>
         </div>
       </div>
