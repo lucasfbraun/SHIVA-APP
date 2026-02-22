@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Trash2, Edit2, Plus, Search } from 'lucide-react';
 import { clienteService, ClienteData } from '@/services/clienteService';
+import api from '@/services/api';
 
 export default function Clientes() {
   const [clientes, setClientes] = useState<ClienteData[]>([]);
@@ -76,13 +77,34 @@ export default function Clientes() {
   };
 
   const handleDeletar = async (id: string) => {
-    if (confirm('Tem certeza que deseja deletar este cliente?')) {
-      try {
-        await clienteService.delete(id);
-        await carregarClientes();
-      } catch (error) {
-        alert('Erro ao deletar cliente');
+    try {
+      // Verificar se pode deletar
+      const response = await api.get(`/clientes/${id}/pode-deletar`);
+      const { podeDeletar, motivos } = response.data;
+      
+      if (!podeDeletar) {
+        let mensagem = 'Não é possível deletar este cliente!\n\n';
+        mensagem += 'O cliente possui vínculos que impedem a exclusão:\n\n';
+        
+        if (motivos.temComandas) {
+          mensagem += `• ${motivos.quantidadeComandas} comanda(s) registrada(s)\n`;
+        }
+        
+        mensagem += '\n💡 Este cliente possui histórico no sistema e não pode ser removido.';
+        
+        alert(mensagem);
+        return;
       }
+      
+      // Se pode deletar, pedir confirmação
+      if (!confirm('Tem certeza que deseja deletar este cliente?\n\nATENÇÃO: Esta ação não pode ser desfeita!')) return;
+      
+      await clienteService.delete(id);
+      await carregarClientes();
+      alert('Cliente deletado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao deletar cliente:', error);
+      alert('Erro ao deletar cliente');
     }
   };
 

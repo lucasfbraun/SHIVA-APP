@@ -123,6 +123,38 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// GET - Verificar se cliente pode ser deletado
+router.get('/:id/pode-deletar', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar se cliente existe
+    const cliente = await prisma.cliente.findUnique({
+      where: { id },
+      include: {
+        comandas: true
+      }
+    });
+    
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente não encontrado' });
+    }
+    
+    const temComandas = cliente.comandas.length > 0;
+    const podeDeletar = !temComandas;
+    
+    res.json({
+      podeDeletar,
+      motivos: {
+        temComandas,
+        quantidadeComandas: cliente.comandas.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao verificar cliente' });
+  }
+});
+
 // DELETE - Deletar cliente (soft delete)
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
