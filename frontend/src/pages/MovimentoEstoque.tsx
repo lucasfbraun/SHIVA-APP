@@ -142,7 +142,7 @@ export default function MovimentoEstoque() {
                         type="button"
                         onClick={() => {
                           setProdutoSelecionado(produto);
-                          setCustoUnitario(produto.custoMedio?.toString() || '');
+                          setCustoUnitario('');
                         }}
                         className="w-full text-left p-3 rounded-lg hover:bg-purple-primary/10 transition border border-transparent hover:border-purple-primary/50"
                       >

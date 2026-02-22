@@ -48,7 +48,7 @@ export default function Produtos() {
 
   const abrirModalEntrada = (produto: Produto) => {
     setProdutoSelecionado(produto);
-    setCustoUnitario(produto.custoMedio.toString());
+    setCustoUnitario('');
     setQuantidade('');
     setModalEntrada(true);
   };
