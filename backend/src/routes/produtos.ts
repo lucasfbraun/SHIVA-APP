@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import * as XLSX from 'xlsx';
 
 const router = Router();
 
@@ -123,7 +124,7 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
             quantidade: 0
           }
         }
-      },
+      } as any,
       include: { estoque: true }
     });
     
@@ -275,6 +276,108 @@ router.post('/calcular-preco', async (req: Request, res: Response) => {
     res.json({ precoSugerido: precoSugerido.toFixed(2) });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao calcular preço' });
+  }
+});
+
+// GET - Exportar produtos para Excel
+router.get('/exportar/excel', async (req: Request, res: Response) => {
+  try {
+    const produtos = await prisma.produto.findMany({
+      include: { estoque: true },
+      orderBy: { nome: 'asc' }
+    });
+
+    // Preparar dados para o Excel
+    const dadosExcel = produtos.map((p: any) => ({
+      'Código': p.id,
+      'Nome': p.nome,
+      'Categoria': p.categoria || '',
+      'Código de Barras': p.codigoBarras || '',
+      'Custo Médio': p.custoMedio ? parseFloat(p.custoMedio.toString()).toFixed(2) : '0.00',
+      'Preço Venda': p.precoVenda ? parseFloat(p.precoVenda.toString()).toFixed(2) : '0.00',
+      'Markup': p.markup ? parseFloat(p.markup.toString()).toFixed(2) : '0.00',
+      'Estoque Atual': p.estoque?.quantidade || 0,
+      'Controla Estoque': p.controlaEstoque ? 'Sim' : 'Não',
+      'Status': p.ativo ? 'Ativo' : 'Inativo'
+    }));
+
+    // Criar workbook e worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(dadosExcel);
+
+    // Ajustar largura das colunas
+    const colWidths = [
+      { wch: 36 },  // Código
+      { wch: 30 },  // Nome
+      { wch: 15 },  // Categoria
+      { wch: 18 },  // Código de Barras
+      { wch: 12 },  // Custo Médio
+      { wch: 12 },  // Preço Venda
+      { wch: 10 },  // Markup
+      { wch: 14 },  // Estoque Atual
+      { wch: 16 },  // Controla Estoque
+      { wch: 10 },  // Status
+      { wch: 30 }   // Observações
+    ];
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
+
+    // Gerar buffer do Excel
+    const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    // Configurar headers para download
+    const dataAtual = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=produtos_${dataAtual}.xlsx`);
+    
+    res.send(excelBuffer);
+  } catch (error) {
+    console.error('Erro ao exportar Excel:', error);
+    res.status(500).json({ error: 'Erro ao exportar produtos para Excel' });
+  }
+});
+
+// GET - Exportar produtos para CSV
+router.get('/exportar/csv', async (req: Request, res: Response) => {
+  try {
+    const produtos = await prisma.produto.findMany({
+      include: { estoque: true },
+      orderBy: { nome: 'asc' }
+    });
+
+    // Preparar dados para o CSV
+    const dadosCSV = produtos.map((p: any) => ({
+      'Código': p.id,
+      'Nome': p.nome,
+      'Categoria': p.categoria || '',
+      'Código de Barras': p.codigoBarras || '',
+      'Custo Médio': p.custoMedio ? parseFloat(p.custoMedio.toString()).toFixed(2) : '0.00',
+      'Preço Venda': p.precoVenda ? parseFloat(p.precoVenda.toString()).toFixed(2) : '0.00',
+      'Markup': p.markup ? parseFloat(p.markup.toString()).toFixed(2) : '0.00',
+      'Estoque Atual': p.estoque?.quantidade || 0,
+      'Controla Estoque': p.controlaEstoque ? 'Sim' : 'Não',
+      'Status': p.ativo ? 'Ativo' : 'Inativo'
+    }));
+
+    // Criar workbook e converter para CSV
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(dadosCSV);
+    XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
+
+    // Gerar CSV
+    const csvData = XLSX.utils.sheet_to_csv(ws);
+
+    // Configurar headers para download
+    const dataAtual = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=produtos_${dataAtual}.csv`);
+    
+    // Adicionar BOM para suportar UTF-8 no Excel
+    res.send('\ufeff' + csvData);
+  } catch (error) {
+    console.error('Erro ao exportar CSV:', error);
+    res.status(500).json({ error: 'Erro ao exportar produtos para CSV' });
   }
 });
 

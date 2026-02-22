@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Power, Trash2, Package, PackagePlus, RefreshCw } from 'lucide-react';
+import { Plus, Search, Edit, Power, Trash2, Package, PackagePlus, RefreshCw, FileSpreadsheet, Download } from 'lucide-react';
 import { produtoService } from '@/services/produtoService';
 import { Produto } from '@/types';
 import api from '@/services/api';
@@ -17,6 +17,7 @@ export default function Produtos() {
   const [custoUnitario, setCustoUnitario] = useState('');
   const [processando, setProcessando] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
   useEffect(() => {
     loadProdutos();
@@ -138,6 +139,35 @@ export default function Produtos() {
     }
   };
 
+  const handleExportar = async (formato: 'excel' | 'csv') => {
+    try {
+      setExportando(true);
+      const response = await api.get(`/produtos/exportar/${formato}`, {
+        responseType: 'blob'
+      });
+      
+      // Criar link para download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const dataAtual = new Date().toISOString().split('T')[0];
+      const extensao = formato === 'excel' ? 'xlsx' : 'csv';
+      link.setAttribute('download', `produtos_${dataAtual}.${extensao}`);
+      
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(`Erro ao exportar ${formato}:`, error);
+      alert(`Erro ao exportar produtos para ${formato.toUpperCase()}`);
+    } finally {
+      setExportando(false);
+    }
+  };
+
   const produtosFiltrados = produtos.filter((produto) => {
     return produto.nome.toLowerCase().includes(busca.toLowerCase()) ||
       produto.categoria?.toLowerCase().includes(busca.toLowerCase());
@@ -152,6 +182,24 @@ export default function Produtos() {
           <p className="text-text-secondary mt-2">Gerencie seu catálogo</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => handleExportar('excel')}
+            disabled={exportando}
+            className="btn-secondary flex items-center space-x-2 justify-center"
+            title="Exportar produtos para Excel"
+          >
+            <FileSpreadsheet size={20} />
+            <span>Excel</span>
+          </button>
+          <button
+            onClick={() => handleExportar('csv')}
+            disabled={exportando}
+            className="btn-secondary flex items-center space-x-2 justify-center"
+            title="Exportar produtos para CSV"
+          >
+            <Download size={20} />
+            <span>CSV</span>
+          </button>
           <button
             onClick={handleRecalcularEstoque}
             disabled={recalculando}
