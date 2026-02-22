@@ -139,21 +139,33 @@ router.post('/', upload.single('imagem'), async (req: Request, res: Response) =>
 router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, ativo, controlaEstoque, tipo } = req.body;
+    const { nome, descricao, categoria, codigoInterno, codigoBarras, custoMedio, precoVenda, markup, ativo, controlaEstoque, tipo, removerImagem } = req.body;
     
     const produtoExistente = await prisma.produto.findUnique({ where: { id } });
     if (!produtoExistente) {
       return res.status(404).json({ error: 'Produto não encontrado' });
     }
     
-    const imagemUrl = req.file ? `/uploads/produtos/${req.file.filename}` : produtoExistente.imagemUrl;
+    let imagemUrl = produtoExistente.imagemUrl;
     
-    // Se mudar imagem, deletar a antiga
-    if (req.file && produtoExistente.imagemUrl) {
+    // Se remover imagem
+    if (removerImagem === 'true' && produtoExistente.imagemUrl) {
       const caminhoAntigo = path.join(process.cwd(), produtoExistente.imagemUrl);
       if (fs.existsSync(caminhoAntigo)) {
         fs.unlinkSync(caminhoAntigo);
       }
+      imagemUrl = null;
+    }
+    // Se fazer upload de nova imagem
+    else if (req.file) {
+      // Deletar imagem anterior se existir
+      if (produtoExistente.imagemUrl) {
+        const caminhoAntigo = path.join(process.cwd(), produtoExistente.imagemUrl);
+        if (fs.existsSync(caminhoAntigo)) {
+          fs.unlinkSync(caminhoAntigo);
+        }
+      }
+      imagemUrl = `/uploads/produtos/${req.file.filename}`;
     }
     
     const produto = await prisma.produto.update({
@@ -170,7 +182,7 @@ router.put('/:id', upload.single('imagem'), async (req: Request, res: Response) 
         ...(tipo && { tipo }),
         ...(ativo !== undefined && { ativo: ativo === 'true' }),
         ...(controlaEstoque !== undefined && { controlaEstoque: controlaEstoque === 'true' || controlaEstoque === true }),
-        ...(imagemUrl && { imagemUrl })
+        imagemUrl
       },
       include: { estoque: true }
     });

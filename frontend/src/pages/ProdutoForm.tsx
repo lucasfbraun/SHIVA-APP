@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Camera, Upload, Calculator } from 'lucide-react';
+import { ArrowLeft, Camera, Upload, Calculator, Trash2 } from 'lucide-react';
 import { produtoService } from '@/services/produtoService';
 import { Produto } from '@/types';
 import EngenhariaModal from '@/components/EngenhariaModal';
@@ -14,6 +14,7 @@ export default function ProdutoForm() {
   const [loadingProduto, setLoadingProduto] = useState(!!id);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
   const [engenhariaModalAberto, setEngenhariaModalAberto] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -69,12 +70,19 @@ export default function ProdutoForm() {
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
+      setImageRemoved(false);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleRemoveImage = () => {
+    setPreviewImage(null);
+    setImageFile(null);
+    setImageRemoved(true);
   };
 
   const calcularPrecoSugerido = async () => {
@@ -120,6 +128,10 @@ export default function ProdutoForm() {
       data.append('tipo', formData.tipo);
       data.append('controlaEstoque', String(formData.controlaEstoque));
       data.append('ativo', String(formData.ativo));
+      
+      if (imageRemoved) {
+        data.append('removerImagem', 'true');
+      }
 
       if (imageFile) {
         data.append('imagem', imageFile);
@@ -220,6 +232,16 @@ export default function ProdutoForm() {
                 <Upload size={20} />
                 <span>Selecionar Imagem</span>
               </button>
+              {previewImage && (
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="btn-primary flex items-center space-x-2"
+                >
+                  <Trash2 size={20} />
+                  <span>Remover Imagem</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

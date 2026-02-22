@@ -38,6 +38,13 @@
            hover:shadow-[0_0_15px_rgba(225,6,0,0.6)];
   }
 
+  /* Botão azul */
+  .btn-blue {
+    @apply bg-blue-action text-white px-6 py-3 rounded-xl 
+           transition-all duration-300 hover:bg-blue-action/80 
+           hover:shadow-[0_0_15px_rgba(59,130,246,0.6)];
+  }
+
   /* Card padrão */
   .card {
     @apply bg-background-secondary border border-purple-primary/30 
