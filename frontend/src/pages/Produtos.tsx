@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Package, PackagePlus, PenLine } from 'lucide-react';
 import { produtoService } from '@/services/produtoService';
 import { Produto } from '@/types';
+import api from '@/services/api';
 
 export default function Produtos() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -69,14 +70,10 @@ export default function Produtos() {
     try {
       setProcessando(true);
       
-      await fetch('/api/estoque/entrada', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          produtoId: produtoSelecionado.id,
-          quantidade: parseFloat(quantidade),
-          custoUnitario: parseFloat(custoUnitario),
-        })
+      await api.post('/estoque/entrada', {
+        produtoId: produtoSelecionado.id,
+        quantidade: parseFloat(quantidade),
+        custoUnitario: parseFloat(custoUnitario),
       });
 
       setModalEntrada(false);
@@ -103,21 +100,39 @@ export default function Produtos() {
     try {
       setProcessando(true);
       
-      await fetch(`/api/estoque/manual/${produtoSelecionado.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          quantidadeEstoque: parseFloat(novoEstoque),
-        })
+      const qtd = parseFloat(novoEstoque);
+      
+      if (isNaN(qtd)) {
+        alert('Quantidade inválida');
+        return;
+      }
+      
+      console.log('Atualizando estoque:', {
+        produtoId: produtoSelecionado.id,
+        produtoNome: produtoSelecionado.nome,
+        quantidadeAtual: produtoSelecionado.estoque?.quantidade || 0,
+        quantidadeNova: qtd
       });
+      
+      const response = await api.put(`/estoque/manual/${produtoSelecionado.id}`, {
+        quantidadeEstoque: qtd,
+      });
+      
+      console.log('Resposta da API:', response.data);
 
+      // Fechar modal
       setModalEditarEstoque(false);
       setProdutoSelecionado(null);
       setNovoEstoque('');
-      loadProdutos();
-    } catch (error) {
+      
+      // Recarregar produtos
+      await loadProdutos();
+      
+      alert('Estoque atualizado com sucesso!');
+    } catch (error: any) {
       console.error('Erro ao editar estoque:', error);
-      alert('Erro ao editar estoque');
+      console.error('Detalhes do erro:', error.response?.data);
+      alert(`Erro ao editar estoque: ${error.response?.data?.error || error.message}`);
     } finally {
       setProcessando(false);
     }

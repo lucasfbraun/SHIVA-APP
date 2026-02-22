@@ -263,14 +263,23 @@ router.post('/:id/fechar', async (req: Request, res: Response) => {
     
     // Fechar comanda e dar baixa no estoque
     const resultado = await prisma.$transaction(async (tx) => {
-      // Dar baixa no estoque de cada item
+      // Dar baixa no estoque de cada item (apenas produtos que controlam estoque)
       for (const item of comanda.itens) {
-        await tx.estoque.update({
-          where: { produtoId: item.produtoId },
-          data: {
-            quantidade: { decrement: item.quantidade }
-          }
+        // Buscar produto para verificar se controla estoque
+        const produto = await tx.produto.findUnique({
+          where: { id: item.produtoId },
+          select: { controlaEstoque: true }
         });
+        
+        // Só dar baixa se o produto controla estoque
+        if (produto?.controlaEstoque !== false) {
+          await tx.estoque.update({
+            where: { produtoId: item.produtoId },
+            data: {
+              quantidade: { decrement: item.quantidade }
+            }
+          });
+        }
       }
       
       // Fechar comanda

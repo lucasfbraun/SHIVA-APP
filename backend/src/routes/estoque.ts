@@ -3,6 +3,33 @@ import prisma from '../lib/prisma';
 
 const router = Router();
 
+// GET - Verificar estoque de um produto (para debug)
+router.get('/verificar/:produtoId', async (req: Request, res: Response) => {
+  try {
+    const { produtoId } = req.params;
+    
+    const produto = await prisma.produto.findUnique({
+      where: { id: produtoId },
+      include: { estoque: true }
+    });
+    
+    if (!produto) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+    
+    res.json({
+      produto: {
+        id: produto.id,
+        nome: produto.nome,
+        controlaEstoque: produto.controlaEstoque
+      },
+      estoque: produto.estoque
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao verificar estoque' });
+  }
+});
+
 // POST - Entrada de estoque (atualiza quantidade e custo médio)
 router.post('/entrada', async (req: Request, res: Response) => {
   try {
@@ -137,35 +164,66 @@ router.put('/manual/:produtoId', async (req: Request, res: Response) => {
     const { produtoId } = req.params;
     const { quantidadeEstoque } = req.body;
 
+    console.log('=== Editar Estoque Manual ===');
+    console.log('Produto ID:', produtoId);
+    console.log('Body recebido:', req.body);
+    console.log('Quantidade recebida:', quantidadeEstoque);
+
     if (quantidadeEstoque === undefined || quantidadeEstoque === null) {
       return res.status(400).json({ error: 'Quantidade é obrigatória' });
     }
 
-    const qtd = parseFloat(quantidadeEstoque);
+    const qtd = parseFloat(String(quantidadeEstoque));
+
+    if (isNaN(qtd)) {
+      return res.status(400).json({ error: 'Quantidade inválida' });
+    }
 
     if (qtd < 0) {
       return res.status(400).json({ error: 'Quantidade não pode ser negativa' });
     }
 
-    // Atualizar produto e estoque
-    const resultado = await prisma.$transaction(async (tx) => {
-      // Atualizar estoque
-      const estoque = await tx.estoque.upsert({
-        where: { produtoId },
-        update: { quantidade: qtd },
-        create: { produtoId, quantidade: qtd }
-      });
+    console.log('Quantidade parseada:', qtd);
 
-      // Buscar produto atualizado com estoque
-      const produto = await tx.produto.findUnique({
-        where: { id: produtoId },
-        include: { estoque: true }
-      });
-
-      return produto;
+    // Verificar se produto existe
+    const produtoExiste = await prisma.produto.findUnique({
+      where: { id: produtoId },
+      include: { estoque: true }
     });
 
-    res.json(resultado);
+    if (!produtoExiste) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+
+    console.log('Estoque atual antes da atualização:', produtoExiste.estoque);
+
+    // Atualizar estoque diretamente (sem transaction para simplificar)
+    const estoque = await prisma.estoque.upsert({
+      where: { produtoId },
+      update: { 
+        quantidade: qtd 
+      },
+      create: { 
+        produtoId, 
+        quantidade: qtd 
+      }
+    });
+
+    console.log('Estoque após atualização:', estoque);
+
+    // Buscar produto atualizado com estoque
+    const produtoAtualizado = await prisma.produto.findUnique({
+      where: { id: produtoId },
+      include: { estoque: true }
+    });
+
+    console.log('Produto final retornado:', produtoAtualizado);
+
+    res.json({
+      success: true,
+      message: 'Estoque atualizado com sucesso',
+      produto: produtoAtualizado
+    });
   } catch (error: any) {
     console.error('Erro ao atualizar estoque:', error);
     res.status(500).json({ error: error.message || 'Erro ao atualizar estoque' });

@@ -8,7 +8,15 @@ export const produtoService = {
     if (filtros?.categoria) params.append('categoria', filtros.categoria);
     if (filtros?.controlaEstoque !== undefined) params.append('controlaEstoque', String(filtros.controlaEstoque));
     
-    const { data } = await api.get<Produto[]>(`/produtos?${params}`);
+    // Adicionar timestamp para evitar cache
+    params.append('_t', Date.now().toString());
+    
+    const { data } = await api.get<Produto[]>(`/produtos?${params}`, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
     return data;
   },
 
