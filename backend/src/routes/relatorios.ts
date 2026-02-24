@@ -957,4 +957,79 @@ router.get('/kpi-sinuca', async (req: Request, res: Response) => {
   }
 });
 
+// GET - Histórico de vendas do PDV
+router.get('/historico-vendas', async (req: Request, res: Response) => {
+  try {
+    const { dataInicio, dataFim, clienteId, status } = req.query;
+
+    let filtroData: any = {};
+    if (dataInicio && dataFim) {
+      const inicio = new Date(String(dataInicio));
+      inicio.setHours(0, 0, 0, 0);
+      const fim = new Date(String(dataFim));
+      fim.setHours(23, 59, 59, 999);
+      filtroData = {
+        gte: inicio,
+        lte: fim
+      };
+    } else {
+      // Se não informar datas, últimos 30 dias
+      const hoje = new Date();
+      const inicio = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000);
+      filtroData = {
+        gte: inicio,
+        lte: hoje
+      };
+    }
+
+    const whereClause: any = {
+      status: status && status !== 'TODOS' ? String(status) : { in: ['FINALIZADA', 'CANCELADA'] },
+      dataFechamento: filtroData
+    };
+
+    // Filtro de cliente
+    if (clienteId && clienteId !== '') {
+      whereClause.clienteId = String(clienteId);
+    }
+
+    const vendas = await prisma.venda.findMany({
+      where: whereClause,
+      include: {
+        itens: {
+          include: {
+            produto: {
+              select: { nome: true }
+            }
+          }
+        },
+        cliente: {
+          select: { nomeCompleto: true }
+        }
+      },
+      orderBy: { dataFechamento: 'desc' }
+    });
+
+    // Formatar dados em linhas por item
+    const historico = vendas.flatMap(venda => 
+      venda.itens.map(item => ({
+        numeroVenda: venda.numeroVenda,
+        nomeCliente: venda.nomeCliente || venda.cliente?.nomeCompleto || 'Cliente Avulso',
+        nomeProduto: item.nomeProduto,
+        quantidade: item.quantidade,
+        precoUnitario: Math.round(item.precoUnitario * 100) / 100,
+        desconto: Math.round(item.desconto * 100) / 100,
+        subtotal: Math.round(item.subtotal * 100) / 100,
+        tipoPagamento: venda.tipoPagamento,
+        status: venda.status,
+        dataFechamento: venda.dataFechamento
+      }))
+    );
+
+    res.json(historico);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao buscar histórico de vendas' });
+  }
+});
+
 export default router;
+

@@ -90,6 +90,17 @@ export const relatorioService = {
     return data;
   },
 
+  async getHistoricoVendas(dataInicio?: string, dataFim?: string, clienteId?: string, status?: string) {
+    const params = new URLSearchParams();
+    if (dataInicio) params.append('dataInicio', dataInicio);
+    if (dataFim) params.append('dataFim', dataFim);
+    if (clienteId) params.append('clienteId', clienteId);
+    if (status) params.append('status', status);
+    
+    const { data } = await api.get(`/relatorios/historico-vendas?${params}`);
+    return data;
+  },
+
   async getHistoricoPartidas(dataInicio?: string, dataFim?: string, jogadorId?: string, status?: string) {
     const params = new URLSearchParams();
     if (dataInicio) params.append('dataInicio', dataInicio);

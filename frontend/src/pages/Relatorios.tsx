@@ -12,7 +12,7 @@ import { ptBR } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 
 export default function Relatorios() {
-  const [abaSelecionada, setAbaSelecionada] = useState<'vendas' | 'despesas' | 'estoque' | 'historico' | 'sinuca'>('vendas');
+  const [abaSelecionada, setAbaSelecionada] = useState<'vendas' | 'despesas' | 'estoque' | 'historico' | 'historico-vendas' | 'sinuca'>('vendas');
   const [loading, setLoading] = useState(true);
   
   // Vendas
@@ -51,6 +51,13 @@ export default function Relatorios() {
   const [filtroClienteHistorico, setFiltroClienteHistorico] = useState('');
   const [filtroStatusHistorico, setFiltroStatusHistorico] = useState<'TODOS' | 'ABERTA' | 'FECHADA'>('TODOS');
 
+  // Histórico Vendas
+  const [historicoVendas, setHistoricoVendas] = useState<any[]>([]);
+  const [dataInicioHistoricoVendas, setDataInicioHistoricoVendas] = useState('');
+  const [dataFimHistoricoVendas, setDataFimHistoricoVendas] = useState('');
+  const [filtroClienteHistoricoVendas, setFiltroClienteHistoricoVendas] = useState('');
+  const [filtroStatusHistoricoVendas, setFiltroStatusHistoricoVendas] = useState<'TODOS' | 'FINALIZADA' | 'CANCELADA'>('TODOS');
+
   // Sinuca
   const [historicoPartidas, setHistoricoPartidas] = useState<any[]>([]);
   const [kpiSinuca, setKpiSinuca] = useState<any>(null);
@@ -71,10 +78,12 @@ export default function Relatorios() {
       loadRelatorioEstoque();
     } else if (abaSelecionada === 'historico') {
       loadRelatorioHistorico();
+    } else if (abaSelecionada === 'historico-vendas') {
+      loadRelatorioHistoricoVendas();
     } else if (abaSelecionada === 'sinuca') {
       loadRelatorioSinuca();
     }
-  }, [abaSelecionada, mesVendas, anoVendas, todosMesesVendas, mes, ano, filtroTipo, filtroMovimento, dataInicio, dataFim, produtoId, dataInicioHistorico, dataFimHistorico, filtroClienteHistorico, filtroStatusHistorico, dataInicioSinuca, dataFimSinuca, filtroStatusSinuca]);
+  }, [abaSelecionada, mesVendas, anoVendas, todosMesesVendas, mes, ano, filtroTipo, filtroMovimento, dataInicio, dataFim, produtoId, dataInicioHistorico, dataFimHistorico, filtroClienteHistorico, filtroStatusHistorico, dataInicioHistoricoVendas, dataFimHistoricoVendas, filtroClienteHistoricoVendas, filtroStatusHistoricoVendas, dataInicioSinuca, dataFimSinuca, filtroStatusSinuca]);
 
   const loadProdutos = async () => {
     try {
@@ -220,6 +229,24 @@ export default function Relatorios() {
     }
   };
 
+  const loadRelatorioHistoricoVendas = async () => {
+    try {
+      setLoading(true);
+      const data = await relatorioService.getHistoricoVendas(
+        dataInicioHistoricoVendas || undefined,
+        dataFimHistoricoVendas || undefined,
+        undefined,
+        filtroStatusHistoricoVendas !== 'TODOS' ? filtroStatusHistoricoVendas : undefined
+      );
+      setHistoricoVendas(data);
+    } catch (error) {
+      console.error('Erro ao buscar histórico de vendas:', error);
+      setHistoricoVendas([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadRelatorioSinuca = async () => {
     try {
       setLoading(true);
@@ -281,6 +308,23 @@ export default function Relatorios() {
             Vendas
           </div>
           {abaSelecionada === 'vendas' && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-primary to-purple-highlight rounded-t"></div>
+          )}
+        </button>
+
+        <button
+          onClick={() => setAbaSelecionada('historico-vendas')}
+          className={`px-4 py-3 font-medium transition relative ${
+            abaSelecionada === 'historico-vendas'
+              ? 'text-purple-primary'
+              : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <ShoppingCart size={18} />
+            Histórico Vendas PDV
+          </div>
+          {abaSelecionada === 'historico-vendas' && (
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-primary to-purple-highlight rounded-t"></div>
           )}
         </button>
@@ -371,6 +415,18 @@ export default function Relatorios() {
           dadosMensais={dadosMensais}
           kpiAbonado={kpiAbonado}
           getMesNome={getMesNome}
+        />
+      ) : abaSelecionada === 'historico-vendas' ? (
+        <RelatorioHistoricoVendasContent
+          historicoVendas={historicoVendas}
+          dataInicio={dataInicioHistoricoVendas}
+          setDataInicio={setDataInicioHistoricoVendas}
+          dataFim={dataFimHistoricoVendas}
+          setDataFim={setDataFimHistoricoVendas}
+          filtroCliente={filtroClienteHistoricoVendas}
+          setFiltroCliente={setFiltroClienteHistoricoVendas}
+          filtroStatus={filtroStatusHistoricoVendas}
+          setFiltroStatus={setFiltroStatusHistoricoVendas}
         />
       ) : abaSelecionada === 'sinuca' ? (
         <RelatorioSinucaContent
@@ -1326,6 +1382,235 @@ function RelatorioHistoricoContent({ historico, dataInicio, setDataInicio, dataF
                       <span className="text-sm font-medium text-text-primary">
                         R$ {item.subtotal.toFixed(2)}
                       </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs text-text-secondary">
+                        {format(new Date(item.dataFechamento), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Componente de Relatório de Histórico de Vendas PDV
+function RelatorioHistoricoVendasContent({ historicoVendas, dataInicio, setDataInicio, dataFim, setDataFim, filtroCliente, setFiltroCliente, filtroStatus, setFiltroStatus }: any) {
+  // Filtrar dados localmente
+  const historicoFiltrado = historicoVendas.filter((item: any) => {
+    let passar = true;
+    
+    // Filtro por cliente
+    if (filtroCliente && filtroCliente.trim() !== '') {
+      passar = passar && item.nomeCliente.toLowerCase().includes(filtroCliente.toLowerCase());
+    }
+    
+    return passar;
+  });
+
+  const exportarExcel = () => {
+    const dadosExport = historicoFiltrado.map((item: any) => ({
+      'Venda': item.numeroVenda,
+      'Cliente': item.nomeCliente,
+      'Produto': item.nomeProduto,
+      'Quantidade': item.quantidade,
+      'Preço Unit.': `R$ ${item.precoUnitario.toFixed(2)}`,
+      'Desconto': `R$ ${item.desconto.toFixed(2)}`,
+      'Valor': `R$ ${item.subtotal.toFixed(2)}`,
+      'Pagamento': item.tipoPagamento,
+      'Status': item.status,
+      'Data': format(new Date(item.dataFechamento), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dadosExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Histórico Vendas');
+    XLSX.writeFile(wb, `historico-vendas-pdv-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Filtros */}
+      <div className="card">
+        <div className="flex gap-4 items-end flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Data Início
+            </label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="input w-full"
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Data Fim
+            </label>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="input w-full"
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Status
+            </label>
+            <select
+              value={filtroStatus}
+              onChange={(e) => setFiltroStatus(e.target.value)}
+              className="input w-full"
+            >
+              <option value="TODOS">Todos</option>
+              <option value="FINALIZADA">Finalizada</option>
+              <option value="CANCELADA">Cancelada</option>
+            </select>
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Buscar Cliente
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary" size={18} />
+              <input
+                type="text"
+                value={filtroCliente}
+                onChange={(e) => setFiltroCliente(e.target.value)}
+                placeholder="Digite o nome do cliente..."
+                className="input w-full pl-10"
+              />
+              {filtroCliente && (
+                <button
+                  onClick={() => setFiltroCliente('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={exportarExcel}
+            className="btn-secondary flex items-center gap-2"
+            disabled={historicoFiltrado.length === 0}
+          >
+            <Download size={18} />
+            Exportar Excel
+          </button>
+        </div>
+      </div>
+
+      {/* Tabela */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-text-primary">
+            Histórico de Vendas PDV
+          </h2>
+          <span className="text-sm text-text-secondary">
+            {historicoFiltrado.length} {historicoFiltrado.length === 1 ? 'item' : 'itens'}
+            {filtroCliente && ` (filtrado de ${historicoVendas.length})`}
+          </span>
+        </div>
+
+        {historicoFiltrado.length === 0 ? (
+          <div className="text-center py-12">
+            <ShoppingCart className="mx-auto text-text-secondary mb-4" size={48} />
+            <p className="text-text-secondary">
+              {historicoVendas.length === 0 ? 'Nenhum registro encontrado' : 'Nenhum registro corresponde aos filtros'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-purple-primary/20">
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Venda
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Cliente
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Produto
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Quantidade
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Preço Unit.
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Desconto
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Valor
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Pagamento
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Status
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Data
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {historicoFiltrado.map((item: any, index: number) => (
+                  <tr key={index} className="border-b border-purple-primary/10 hover:bg-card-hover transition">
+                    <td className="py-3 px-4">
+                      <span className="text-sm font-medium text-purple-primary">
+                        #{item.numeroVenda}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">{item.nomeCliente}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">{item.nomeProduto}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">{item.quantidade}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">
+                        R$ {item.precoUnitario.toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">
+                        R$ {item.desconto.toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm font-medium text-text-primary">
+                        R$ {item.subtotal.toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-primary/10 text-purple-primary">
+                        {item.tipoPagamento}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      {item.status === 'FINALIZADA' ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500">
+                          Finalizada
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500">
+                          Cancelada
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-xs text-text-secondary">
