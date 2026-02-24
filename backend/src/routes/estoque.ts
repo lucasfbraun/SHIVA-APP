@@ -302,7 +302,12 @@ router.get('/entradas', async (req: Request, res: Response) => {
             nome: true,
             categoria: true,
             codigoInterno: true,
-            codigoBarras: true
+            codigoBarras: true,
+            estoque: {
+              select: {
+                quantidade: true
+              }
+            }
           }
         },
         comanda: {
@@ -313,8 +318,27 @@ router.get('/entradas', async (req: Request, res: Response) => {
       },
       orderBy: { dataEntrada: 'desc' }
     });
-    
-    res.json(entradas);
+
+    const saldoAtualPorProduto: Record<string, number> = {};
+    const entradasComSaldo = entradas.map((entrada) => {
+      if (saldoAtualPorProduto[entrada.produtoId] === undefined) {
+        saldoAtualPorProduto[entrada.produtoId] = entrada.produto?.estoque?.quantidade || 0;
+      }
+
+      const saldoAtual = saldoAtualPorProduto[entrada.produtoId];
+      const delta = entrada.tipoMovimento === 'ENTRADA' ? entrada.quantidade : -entrada.quantidade;
+      const saldoAnterior = saldoAtual - delta;
+
+      saldoAtualPorProduto[entrada.produtoId] = saldoAnterior;
+
+      return {
+        ...entrada,
+        saldoAnterior,
+        saldoAtual
+      };
+    });
+
+    res.json(entradasComSaldo);
   } catch (error: any) {
     console.error('Erro ao buscar entradas:', error);
     res.status(500).json({ error: error.message || 'Erro ao buscar entradas de estoque' });

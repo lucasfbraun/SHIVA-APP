@@ -873,6 +873,8 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
       'Código Interno': entrada.produto.codigoInterno || '-',
       'Categoria': entrada.produto.categoria || '-',
       'Quantidade': entrada.quantidade,
+      'Saldo Anterior': entrada.saldoAnterior ?? '',
+      'Saldo Atual': entrada.saldoAtual ?? '',
       'Custo Unitário': parseFloat(entrada.custoUnitario.toFixed(2)),
       'Total': parseFloat((entrada.quantidade * entrada.custoUnitario).toFixed(2)),
       'Comanda': entrada.comanda ? `#${entrada.comanda.numeroComanda}` : '-',
@@ -892,6 +894,8 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
       { wch: 15 }, // Código Interno
       { wch: 15 }, // Categoria
       { wch: 12 }, // Quantidade
+      { wch: 14 }, // Saldo Anterior
+      { wch: 12 }, // Saldo Atual
       { wch: 15 }, // Custo Unitário
       { wch: 15 }, // Total
       { wch: 12 }, // Comanda
@@ -1116,6 +1120,8 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Data</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Produto</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Qtd</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Saldo Anterior</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Saldo Atual</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Custo Unit.</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Total</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Comanda</th>
@@ -1146,6 +1152,16 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm text-text-primary">{entrada.quantidade}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">
+                        {entrada.saldoAnterior ?? '-'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">
+                        {entrada.saldoAtual ?? '-'}
+                      </span>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm text-text-primary">R$ {entrada.custoUnitario.toFixed(2)}</span>

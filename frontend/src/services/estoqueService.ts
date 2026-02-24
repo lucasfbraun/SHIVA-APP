@@ -12,12 +12,17 @@ export interface EntradaEstoque {
   comandaId: string | null;
   observacao: string | null;
   criadoEm: string;
+  saldoAnterior?: number;
+  saldoAtual?: number;
   produto: {
     id: string;
     nome: string;
     categoria: string | null;
     codigoInterno: string | null;
     codigoBarras: string | null;
+    estoque?: {
+      quantidade: number;
+    } | null;
   };
   comanda?: {
     numeroComanda: number;
