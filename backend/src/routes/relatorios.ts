@@ -583,4 +583,77 @@ router.get('/top-clientes/ranking', async (req: Request, res: Response) => {
   }
 });
 
+// GET - KPI Faturamento Abonado
+router.get('/vendas/faturamento-abonado', async (req: Request, res: Response) => {
+  try {
+    const { dataInicio, dataFim } = req.query;
+
+    let filtro: any = {};
+
+    // Se não informar datas, usa último mês
+    if (dataInicio && dataFim) {
+      filtro.criadoEm = {
+        gte: new Date(String(dataInicio)),
+        lte: new Date(String(dataFim))
+      };
+    } else {
+      const hoje = new Date();
+      const inicio = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 dias atrás
+      filtro.criadoEm = {
+        gte: inicio,
+        lte: hoje
+      };
+    }
+
+    // Buscar itens abonados
+    const itensAbonados = await prisma.itemComanda.findMany({
+      where: {
+        abonado: true,
+        ...filtro
+      },
+      include: {
+        comanda: true
+      }
+    });
+
+    // Buscar todos os itens no período para calcular percentual
+    const todosItens = await prisma.itemComanda.findMany({
+      where: filtro,
+      include: {
+        comanda: true
+      }
+    });
+
+    // Calcular totais
+    const totalAbonado = itensAbonados.reduce((sum, item) => sum + item.subtotal, 0);
+    const custoTotal = itensAbonados.reduce((sum, item) => sum + (item.custoUnitario * item.quantidade), 0);
+    const totalFaturado = todosItens
+      .filter(i => !i.abonado)
+      .reduce((sum, item) => sum + item.subtotal, 0);
+    const totalGeralVendido = todosItens.reduce((sum, item) => sum + item.subtotal, 0);
+
+    const percentualAbonado = totalGeralVendido > 0 ? (totalAbonado / totalGeralVendido) * 100 : 0;
+    const qtdItensAbonados = itensAbonados.length;
+
+    // Gráfico: Evolução diária
+    const graficoDiario: { [key: string]: number } = {};
+    itensAbonados.forEach(item => {
+      const data = new Date(item.criadoEm).toISOString().split('T')[0];
+      graficoDiario[data] = (graficoDiario[data] || 0) + item.subtotal;
+    });
+
+    res.json({
+      totalAbonado: Math.round(totalAbonado * 100) / 100,
+      custoTotal: Math.round(custoTotal * 100) / 100,
+      percentualAbonado: Math.round(percentualAbonado * 100) / 100,
+      qtdItensAbonados,
+      totalFaturado: Math.round(totalFaturado * 100) / 100,
+      totalGeralVendido: Math.round(totalGeralVendido * 100) / 100,
+      graficoDiario
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao buscar KPI faturamento abonado' });
+  }
+});
+
 export default router;

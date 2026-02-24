@@ -157,6 +157,7 @@ router.post('/:id/itens', async (req: Request, res: Response) => {
           nomeProduto: produto.nome,
           quantidade: qtd,
           precoUnitario: produto.precoVenda,
+          custoUnitario: produto.custoMedio, // Captura snapshot do custo
           subtotal
         }
       });
@@ -253,14 +254,6 @@ router.post('/:id/fechar', async (req: Request, res: Response) => {
       });
     }
     
-    // Validação adicional: verificar se há itens não pagos
-    const itensNaoPagos = comanda.itens.filter(item => !item.pago);
-    if (itensNaoPagos.length > 0 && comanda.valorPago === 0) {
-      return res.status(400).json({ 
-        error: `Há ${itensNaoPagos.length} item(ns) não pago(s). Marque os itens como pagos ou adicione pagamentos antes de fechar.`
-      });
-    }
-    
     // Fechar comanda e dar baixa no estoque
     const resultado = await prisma.$transaction(async (tx) => {
       // Dar baixa no estoque de cada item (apenas produtos que controlam estoque)
@@ -332,9 +325,9 @@ router.post('/:id/pagar-itens', async (req: Request, res: Response) => {
       });
     }
     
-    // Calcular valor dos itens a marcar como pagos
+    // Calcular valor dos itens a marcar como pagos (excluindo abonados)
     const itensPagar = comanda.itens.filter(item => 
-      itensIds.includes(item.id) && !item.pago
+      itensIds.includes(item.id) && !item.pago && !item.abonado
     );
     
     if (itensPagar.length === 0) {
@@ -475,12 +468,14 @@ router.post('/:id/recalcular', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Comanda não encontrada' });
     }
     
-    // Calcular total de todos os itens
-    const total = arredondar(comanda.itens.reduce((sum, item) => sum + item.subtotal, 0));
+    // Calcular total de itens faturados (excluindo abonados)
+    const total = arredondar(comanda.itens
+      .filter(item => !item.abonado)
+      .reduce((sum, item) => sum + item.subtotal, 0));
     
-    // Calcular valor pago (soma dos itens pagos)
+    // Calcular valor pago (soma dos itens pagos e não abonados)
     const valorPago = arredondar(comanda.itens
-      .filter(item => item.pago)
+      .filter(item => item.pago && !item.abonado)
       .reduce((sum, item) => sum + item.subtotal, 0));
     
     // Calcular valor restante (considerando desconto)
@@ -510,26 +505,10 @@ router.post('/:id/recalcular', async (req: Request, res: Response) => {
   }
 });
 
-export default router;
-
-// POST - Atualizar desconto da comanda
-router.post('/:id/desconto', async (req: Request, res: Response) => {
+// POST - Abonar item da comanda
+router.post('/:id/itens/:itemId/abonar', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const { desconto, tipoDesconto } = req.body;
-
-    if (desconto === undefined || tipoDesconto === undefined) {
-      return res.status(400).json({ error: 'Desconto e tipo de desconto são obrigatórios' });
-    }
-
-    if (!['VALOR', 'PERCENTUAL'].includes(tipoDesconto)) {
-      return res.status(400).json({ error: 'Tipo de desconto inválido. Use VALOR ou PERCENTUAL' });
-    }
-
-    const descontoNum = parseFloat(desconto);
-    if (descontoNum < 0) {
-      return res.status(400).json({ error: 'Desconto não pode ser negativo' });
-    }
+    const { id, itemId } = req.params;
 
     const comanda = await prisma.comanda.findUnique({
       where: { id },
@@ -544,40 +523,54 @@ router.post('/:id/desconto', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Comanda não está aberta' });
     }
 
-    // Validar percentual
-    if (tipoDesconto === 'PERCENTUAL' && descontoNum > 100) {
-      return res.status(400).json({ error: 'Percentual não pode ser maior que 100' });
+    const item = comanda.itens.find(i => i.id === itemId);
+    if (!item) {
+      return res.status(404).json({ error: 'Item não encontrado' });
     }
 
-    // Calcular desconto em valor
-    const descontoValor = tipoDesconto === 'PERCENTUAL'
-      ? arredondar((comanda.total * descontoNum) / 100)
-      : arredondar(descontoNum);
-
-    // Validar se desconto não é maior que o total
-    if (descontoValor > comanda.total + 0.01) {
-      return res.status(400).json({ error: 'Desconto não pode ser maior que o total da comanda' });
+    if (item.abonado) {
+      return res.status(400).json({ error: 'Item já está abonado' });
     }
 
-    // Calcular novo saldo devedor (total - desconto - valor pago)
-    const novoValorRestante = arredondar(comanda.total - descontoValor - (comanda.valorPago || 0));
+    // Atualizar item como abonado e ajustar valores da comanda
+    const resultado = await prisma.$transaction(async (tx) => {
+      // Marcar como abonado
+      const itemAtualizado = await tx.itemComanda.update({
+        where: { id: itemId },
+        data: { abonado: true }
+      });
 
-    const comandaAtualizada = await prisma.comanda.update({
-      where: { id },
-      data: {
-        desconto: descontoValor,
-        tipoDesconto,
-        valorRestante: Math.abs(novoValorRestante) < 0.01 ? 0 : novoValorRestante
-      },
-      include: { itens: true }
+      // Buscar comanda atual
+      const comandaAtual = await tx.comanda.findUnique({ where: { id } });
+
+      // Recalcular total excluindo itens abonados
+      const todosItens = await tx.itemComanda.findMany({ where: { comandaId: id } });
+      const totalFaturado = todosItens
+        .filter(i => !i.abonado && i.id !== itemId) // Exclui itens abonados
+        .reduce((sum, i) => sum + i.subtotal, 0);
+
+      const novoValorRestante = arredondar(totalFaturado - (comandaAtual?.desconto || 0) - (comandaAtual?.valorPago || 0));
+
+      const comandaAtualizada = await tx.comanda.update({
+        where: { id },
+        data: {
+          total: arredondar(totalFaturado),
+          valorRestante: Math.abs(novoValorRestante) < 0.01 ? 0 : novoValorRestante
+        },
+        include: { itens: true }
+      });
+
+      return { item: itemAtualizado, comanda: comandaAtualizada };
     });
 
     res.json({
-      message: 'Desconto atualizado com sucesso',
-      comanda: comandaAtualizada
+      message: 'Item abonado com sucesso',
+      resultado
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Erro ao atualizar desconto' });
+    res.status(500).json({ error: error.message || 'Erro ao abonar item' });
   }
 });
+
+export default router;
 

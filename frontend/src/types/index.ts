@@ -73,8 +73,10 @@ export interface ItemComanda {
   nomeProduto: string;
   quantidade: number;
   precoUnitario: number;
+  custoUnitario: number;
   subtotal: number;
   pago: boolean;
+  abonado: boolean;
   criadoEm: string;
   produto?: {
     nome: string;

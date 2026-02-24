@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, CheckCircle, XCircle, Package, DollarSign, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, CheckCircle, XCircle, Package, DollarSign, RefreshCw, Gift } from 'lucide-react';
 import { comandaService } from '@/services/comandaService';
 import { produtoService } from '@/services/produtoService';
 import { Comanda, Produto } from '@/types';
@@ -83,6 +83,18 @@ export default function ComandaDetalhes() {
     } catch (error: any) {
       console.error('Erro ao remover item:', error);
       alert(error.response?.data?.error || 'Erro ao remover item');
+    }
+  };
+
+  const handleAbonarItem = async (itemId: string) => {
+    if (!confirm('Deseja abonar este item?')) return;
+
+    try {
+      await comandaService.abonarItem(id!, itemId);
+      loadComanda();
+    } catch (error: any) {
+      console.error('Erro ao abonar item:', error);
+      alert(error.response?.data?.error || 'Erro ao abonar item');
     }
   };
 
@@ -299,6 +311,30 @@ export default function ComandaDetalhes() {
             </div>
           </div>
         )}
+
+        {/* Resumo com Itens Abonados */}
+        {comanda.itens && comanda.itens.some(i => i.abonado) && (
+          <div className="bg-yellow-500/5 rounded-lg p-4 mb-4 border border-yellow-500/30">
+            <div className="space-y-2 text-sm">
+              <p className="font-semibold text-yellow-300 mb-3">Itens Abonados</p>
+              {comanda.itens.filter(i => i.abonado).map(item => (
+                <div key={item.id} className="flex justify-between text-text-secondary">
+                  <span>{item.nomeProduto} ({item.quantidade}x)</span>
+                  <span>-R$ {item.subtotal.toFixed(2)}</span>
+                </div>
+              ))}
+              <div className="border-t border-yellow-500/20 pt-2 flex justify-between text-yellow-300 font-semibold">
+                <span>Total Abonado</span>
+                <span>
+                  -R$ {comanda.itens
+                    .filter(i => i.abonado)
+                    .reduce((sum, i) => sum + i.subtotal, 0)
+                    .toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         {isAberta && (
           <button
             onClick={() => setModalOpen(true)}
@@ -399,7 +435,9 @@ export default function ComandaDetalhes() {
               <div
                 key={item.id}
                 className={`flex items-center justify-between p-4 rounded-lg ${
-                  item.pago 
+                  item.abonado
+                    ? 'bg-yellow-500/10 border border-yellow-500/30 opacity-60'
+                    : item.pago 
                     ? 'bg-green-500/10 border border-green-500/30' 
                     : 'bg-background-primary'
                 }`}
@@ -433,6 +471,11 @@ export default function ComandaDetalhes() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-text-primary">{item.nomeProduto}</p>
+                      {item.abonado && (
+                        <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-300 rounded-full">
+                          ABONADO
+                        </span>
+                      )}
                       {item.pago && (
                         <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
                           PAGO
@@ -448,6 +491,15 @@ export default function ComandaDetalhes() {
                   <p className="font-semibold text-purple-highlight">
                     R$ {item.subtotal.toFixed(2)}
                   </p>
+                  {isAberta && !item.pago && !item.abonado && (
+                    <button
+                      onClick={() => handleAbonarItem(item.id)}
+                      className="p-2 rounded-lg hover:bg-yellow-400/10 transition-colors"
+                      title="Abonar item"
+                    >
+                      <Gift className="text-yellow-400" size={20} />
+                    </button>
+                  )}
                   {isAberta && !item.pago && (
                     <button
                       onClick={() => handleRemoverItem(item.id)}

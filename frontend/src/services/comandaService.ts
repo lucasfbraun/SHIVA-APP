@@ -63,6 +63,12 @@ export const comandaService = {
   async atualizarDesconto(id: string, desconto: number, tipoDesconto: 'VALOR' | 'PERCENTUAL') {
     const { data } = await api.post(`/comandas/${id}/desconto`, { desconto, tipoDesconto });
     return data;
+  },
+
+  async abonarItem(comandaId: string, itemId: string) {
+    const { data } = await api.post(`/comandas/${comandaId}/itens/${itemId}/abonar`);
+    return data;
   }
+
 
 };

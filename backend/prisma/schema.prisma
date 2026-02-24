@@ -119,8 +119,10 @@ model ItemComanda {
   nomeProduto     String   // Snapshot do nome no momento da venda
   quantidade      Float
   precoUnitario   Float
+  custoUnitario   Float   @default(0) // Snapshot do custo médio no momento da venda
   subtotal        Float
   pago            Boolean  @default(false)
+  abonado         Boolean  @default(false) // Item abonado (não conta no faturamento)
   criadoEm        DateTime @default(now())
 
   comanda         Comanda  @relation(fields: [comandaId], references: [id], onDelete: Cascade)
