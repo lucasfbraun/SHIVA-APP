@@ -171,33 +171,73 @@ router.get('/resumo', async (req: Request, res: Response) => {
       filtroData.lte = fim;
     }
 
-    const whereClause: any = { status: 'FECHADA' };
+    // ========== COMANDAS ==========
+    const whereComandas: any = { status: 'FECHADA' };
     if (Object.keys(filtroData).length > 0) {
-      whereClause.dataFechamento = filtroData;
+      whereComandas.dataFechamento = filtroData;
     }
 
-    // Faturamento e custo dos produtos
-    const itens = await prisma.itemComanda.findMany({
-      where: { comanda: whereClause },
+    // Buscar comandas fechadas no período
+    const comandas = await prisma.comanda.findMany({
+      where: whereComandas,
       include: {
-        produto: {
-          select: { custoMedio: true }
+        itens: {
+          include: {
+            produto: {
+              select: { custoMedio: true }
+            }
+          }
         }
       }
     });
 
-    let faturamentoTotal = 0;
-    let custoTotal = 0;
+    let faturamentoComandas = 0;
+    let custoComandas = 0;
 
-    itens.forEach(item => {
-      // Faturamento total: EXCLUI itens abonados (não foram pagos)
-      if (!item.abonado) {
-        faturamentoTotal += item.subtotal;
-      }
-      // Custo total: INCLUI todos os itens (mesmo abonados, pois a empresa teve o custo)
-      custoTotal += item.quantidade * (item.produto.custoMedio || 0);
+    comandas.forEach(comanda => {
+      comanda.itens.forEach(item => {
+        // Faturamento: EXCLUI itens abonados (não foram pagos)
+        if (!item.abonado) {
+          faturamentoComandas += item.subtotal;
+        }
+        // Custo: INCLUI todos os itens (mesmo abonados, pois a empresa teve o custo)
+        custoComandas += item.quantidade * (item.produto.custoMedio || 0);
+      });
     });
 
+    // ========== VENDAS PDV ==========
+    const whereVendas: any = { status: 'FINALIZADA' };
+    if (Object.keys(filtroData).length > 0) {
+      whereVendas.dataFechamento = filtroData;
+    }
+
+    // Buscar vendas finalizadas no período
+    const vendas = await prisma.venda.findMany({
+      where: whereVendas,
+      include: {
+        itens: {
+          include: {
+            produto: {
+              select: { custoMedio: true }
+            }
+          }
+        }
+      }
+    });
+
+    let faturamentoVendas = 0;
+    let custoVendas = 0;
+
+    vendas.forEach(venda => {
+      venda.itens.forEach(item => {
+        faturamentoVendas += item.subtotal;
+        custoVendas += item.quantidade * (item.produto.custoMedio || 0);
+      });
+    });
+
+    // ========== TOTAIS ==========
+    const faturamentoTotal = faturamentoComandas + faturamentoVendas;
+    const custoTotal = custoComandas + custoVendas;
     const lucroGrosso = faturamentoTotal - custoTotal;
     const margemGrossa = faturamentoTotal > 0 ? (lucroGrosso / faturamentoTotal) * 100 : 0;
 
@@ -241,7 +281,11 @@ router.get('/resumo', async (req: Request, res: Response) => {
 
     res.json({
       faturamentoTotal: parseFloat(faturamentoTotal.toFixed(2)),
+      faturamentoComandas: parseFloat(faturamentoComandas.toFixed(2)),
+      faturamentoVendas: parseFloat(faturamentoVendas.toFixed(2)),
       custoTotal: parseFloat(custoTotal.toFixed(2)),
+      custoComandas: parseFloat(custoComandas.toFixed(2)),
+      custoVendas: parseFloat(custoVendas.toFixed(2)),
       despesasTotal: parseFloat(despesasTotal.toFixed(2)),
       lucroGrosso: parseFloat(lucroGrosso.toFixed(2)),
       margemGrossa: parseFloat(margemGrossa.toFixed(2)),

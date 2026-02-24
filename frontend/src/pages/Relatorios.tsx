@@ -482,7 +482,7 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tod
       </div>
 
       {/* Cards com métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div key="faturamento" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-text-secondary text-sm">Faturamento Total</span>
@@ -490,6 +490,39 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tod
           </div>
           <div className="text-3xl font-bold text-purple-primary">
             R$ {resumo?.faturamentoTotal?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
+        </div>
+
+        <div key="faturamento-comandas" className="card shadow-lg hover:shadow-xl hover:shadow-blue-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Vendas por Comandas</span>
+            <FileText className="text-blue-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-blue-500">
+            R$ {resumo?.faturamentoComandas?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
+        </div>
+
+        <div key="faturamento-pdv" className="card shadow-lg hover:shadow-xl hover:shadow-cyan-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Vendas pelo PDV</span>
+            <ShoppingCart className="text-cyan-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-cyan-500">
+            R$ {resumo?.faturamentoVendas?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
+        </div>
+
+        <div key="ticket" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Ticket Médio</span>
+            <BarChart3 className="text-purple-primary" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-purple-primary">
+            R$ {ticketMedio?.toFixed(2) || '0.00'}
           </div>
           <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
         </div>
@@ -523,17 +556,6 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tod
           </div>
           <div className="text-3xl font-bold text-red-500">
             R$ {resumo?.despesasTotal?.toFixed(2) || '0.00'}
-          </div>
-          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
-        </div>
-
-        <div key="ticket" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-text-secondary text-sm">Ticket Médio</span>
-            <ShoppingCart className="text-purple-primary" size={20} />
-          </div>
-          <div className="text-3xl font-bold text-purple-primary">
-            R$ {ticketMedio?.toFixed(2) || '0.00'}
           </div>
           <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
         </div>
