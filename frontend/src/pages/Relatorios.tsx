@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter, Search, X, ArrowDownCircle, ArrowUpCircle, Download, Gift } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter, Search, X, ArrowDownCircle, ArrowUpCircle, Download, Gift, Trophy } from 'lucide-react';
 import { relatorioService } from '@/services/relatorioService';
 import { despesaService } from '@/services/despesaService';
 import { estoqueService, EntradaEstoque } from '@/services/estoqueService';
@@ -12,7 +12,7 @@ import { ptBR } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 
 export default function Relatorios() {
-  const [abaSelecionada, setAbaSelecionada] = useState<'vendas' | 'despesas' | 'estoque' | 'historico'>('vendas');
+  const [abaSelecionada, setAbaSelecionada] = useState<'vendas' | 'despesas' | 'estoque' | 'historico' | 'sinuca'>('vendas');
   const [loading, setLoading] = useState(true);
   
   // Vendas
@@ -48,6 +48,15 @@ export default function Relatorios() {
   const [historico, setHistorico] = useState<any[]>([]);
   const [dataInicioHistorico, setDataInicioHistorico] = useState('');
   const [dataFimHistorico, setDataFimHistorico] = useState('');
+  const [filtroClienteHistorico, setFiltroClienteHistorico] = useState('');
+  const [filtroStatusHistorico, setFiltroStatusHistorico] = useState<'TODOS' | 'ABERTA' | 'FECHADA'>('TODOS');
+
+  // Sinuca
+  const [historicoPartidas, setHistoricoPartidas] = useState<any[]>([]);
+  const [kpiSinuca, setKpiSinuca] = useState<any>(null);
+  const [dataInicioSinuca, setDataInicioSinuca] = useState('');
+  const [dataFimSinuca, setDataFimSinuca] = useState('');
+  const [filtroStatusSinuca, setFiltroStatusSinuca] = useState<'TODOS' | 'FINALIZADA' | 'EM_ANDAMENTO'>('TODOS');
 
   useEffect(() => {
     loadProdutos();
@@ -62,8 +71,10 @@ export default function Relatorios() {
       loadRelatorioEstoque();
     } else if (abaSelecionada === 'historico') {
       loadRelatorioHistorico();
+    } else if (abaSelecionada === 'sinuca') {
+      loadRelatorioSinuca();
     }
-  }, [abaSelecionada, mesVendas, anoVendas, todosMesesVendas, mes, ano, filtroTipo, filtroMovimento, dataInicio, dataFim, produtoId, dataInicioHistorico, dataFimHistorico]);
+  }, [abaSelecionada, mesVendas, anoVendas, todosMesesVendas, mes, ano, filtroTipo, filtroMovimento, dataInicio, dataFim, produtoId, dataInicioHistorico, dataFimHistorico, filtroClienteHistorico, filtroStatusHistorico, dataInicioSinuca, dataFimSinuca, filtroStatusSinuca]);
 
   const loadProdutos = async () => {
     try {
@@ -209,6 +220,32 @@ export default function Relatorios() {
     }
   };
 
+  const loadRelatorioSinuca = async () => {
+    try {
+      setLoading(true);
+      const [partidas, kpi] = await Promise.all([
+        relatorioService.getHistoricoPartidas(
+          dataInicioSinuca || undefined,
+          dataFimSinuca || undefined,
+          undefined,
+          filtroStatusSinuca !== 'TODOS' ? filtroStatusSinuca : undefined
+        ),
+        relatorioService.getKPISinuca(
+          dataInicioSinuca || undefined,
+          dataFimSinuca || undefined
+        )
+      ]);
+      setHistoricoPartidas(partidas);
+      setKpiSinuca(kpi);
+    } catch (error) {
+      console.error('Erro ao buscar relatório de sinuca:', error);
+      setHistoricoPartidas([]);
+      setKpiSinuca(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getMesNome = (m: number) => {
     return new Date(2024, m - 1).toLocaleString('pt-BR', { month: 'long' });
   };
@@ -298,6 +335,23 @@ export default function Relatorios() {
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-primary to-purple-highlight rounded-t"></div>
           )}
         </button>
+
+        <button
+          onClick={() => setAbaSelecionada('sinuca')}
+          className={`px-4 py-3 font-medium transition relative ${
+            abaSelecionada === 'sinuca'
+              ? 'text-purple-primary'
+              : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Trophy size={18} />
+            Histórico Sinuca
+          </div>
+          {abaSelecionada === 'sinuca' && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-primary to-purple-highlight rounded-t"></div>
+          )}
+        </button>
       </div>
 
       {/* Conteúdo das Abas */}
@@ -317,6 +371,17 @@ export default function Relatorios() {
           dadosMensais={dadosMensais}
           kpiAbonado={kpiAbonado}
           getMesNome={getMesNome}
+        />
+      ) : abaSelecionada === 'sinuca' ? (
+        <RelatorioSinucaContent
+          historicoPartidas={historicoPartidas}
+          kpiSinuca={kpiSinuca}
+          dataInicio={dataInicioSinuca}
+          setDataInicio={setDataInicioSinuca}
+          dataFim={dataFimSinuca}
+          setDataFim={setDataFimSinuca}
+          filtroStatus={filtroStatusSinuca}
+          setFiltroStatus={setFiltroStatusSinuca}
         />
       ) : abaSelecionada === 'despesas' ? (
         <RelatorioDespesasContent
@@ -355,6 +420,10 @@ export default function Relatorios() {
           setDataInicio={setDataInicioHistorico}
           dataFim={dataFimHistorico}
           setDataFim={setDataFimHistorico}
+          filtroCliente={filtroClienteHistorico}
+          setFiltroCliente={setFiltroClienteHistorico}
+          filtroStatus={filtroStatusHistorico}
+          setFiltroStatus={setFiltroStatusHistorico}
         />
       )}
     </div>
@@ -1064,9 +1133,21 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
 }
 
 // Componente de Relatório de Histórico de Comandas
-function RelatorioHistoricoContent({ historico, dataInicio, setDataInicio, dataFim, setDataFim }: any) {
+function RelatorioHistoricoContent({ historico, dataInicio, setDataInicio, dataFim, setDataFim, filtroCliente, setFiltroCliente, filtroStatus, setFiltroStatus }: any) {
+  // Filtrar dados localmente
+  const historicoFiltrado = historico.filter((item: any) => {
+    let passar = true;
+    
+    // Filtro por cliente
+    if (filtroCliente && filtroCliente.trim() !== '') {
+      passar = passar && item.nomeCliente.toLowerCase().includes(filtroCliente.toLowerCase());
+    }
+    
+    return passar;
+  });
+
   const exportarExcel = () => {
-    const dadosExport = historico.map((item: any) => ({
+    const dadosExport = historicoFiltrado.map((item: any) => ({
       'Comanda': item.numeroComanda,
       'Cliente': item.nomeCliente,
       'Produto': item.nomeProduto,
@@ -1109,10 +1190,33 @@ function RelatorioHistoricoContent({ historico, dataInicio, setDataInicio, dataF
               className="input w-full"
             />
           </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Buscar Cliente
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary" size={18} />
+              <input
+                type="text"
+                value={filtroCliente}
+                onChange={(e) => setFiltroCliente(e.target.value)}
+                placeholder="Digite o nome do cliente..."
+                className="input w-full pl-10"
+              />
+              {filtroCliente && (
+                <button
+                  onClick={() => setFiltroCliente('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+          </div>
           <button
             onClick={exportarExcel}
             className="btn-secondary flex items-center gap-2"
-            disabled={historico.length === 0}
+            disabled={historicoFiltrado.length === 0}
           >
             <Download size={18} />
             Exportar Excel
@@ -1127,14 +1231,17 @@ function RelatorioHistoricoContent({ historico, dataInicio, setDataInicio, dataF
             Histórico de Comandas
           </h2>
           <span className="text-sm text-text-secondary">
-            {historico.length} {historico.length === 1 ? 'item' : 'itens'}
+            {historicoFiltrado.length} {historicoFiltrado.length === 1 ? 'item' : 'itens'}
+            {filtroCliente && ` (filtrado de ${historico.length})`}
           </span>
         </div>
 
-        {historico.length === 0 ? (
+        {historicoFiltrado.length === 0 ? (
           <div className="text-center py-12">
             <FileText className="mx-auto text-text-secondary mb-4" size={48} />
-            <p className="text-text-secondary">Nenhum registro encontrado</p>
+            <p className="text-text-secondary">
+              {historico.length === 0 ? 'Nenhum registro encontrado' : 'Nenhum registro corresponde aos filtros'}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -1165,7 +1272,7 @@ function RelatorioHistoricoContent({ historico, dataInicio, setDataInicio, dataF
                 </tr>
               </thead>
               <tbody>
-                {historico.map((item: any, index: number) => (
+                {historicoFiltrado.map((item: any, index: number) => (
                   <tr key={index} className="border-b border-purple-primary/10 hover:bg-card-hover transition">
                     <td className="py-3 px-4">
                       <span className="text-sm font-medium text-purple-primary">
@@ -1201,6 +1308,283 @@ function RelatorioHistoricoContent({ historico, dataInicio, setDataInicio, dataF
                     <td className="py-3 px-4">
                       <span className="text-xs text-text-secondary">
                         {format(new Date(item.dataFechamento), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+// Componente de Relatório de Sinuca
+function RelatorioSinucaContent({ historicoPartidas, kpiSinuca, dataInicio, setDataInicio, dataFim, setDataFim, filtroStatus, setFiltroStatus }: any) {
+  const exportarExcel = () => {
+    const dadosExport = historicoPartidas.map((item: any) => ({
+      'Jogador 1': item.jogador1,
+      'Jogador 2': item.jogador2,
+      'Placar': `${item.placar1} x ${item.placar2}`,
+      'Resultado': item.resultado,
+      'Tipo': item.tipo === 'UNICA' ? 'Partida Única' : `Melhor de ${item.melhorDe}`,
+      'Status': item.status === 'FINALIZADA' ? 'Finalizada' : 'Em Andamento',
+      'Torneio': item.torneio,
+      'Data': format(new Date(item.dataCriacao), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dadosExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Histórico Sinuca');
+    XLSX.writeFile(wb, `historico-sinuca-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* KPIs de Sinuca */}
+      {kpiSinuca && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-text-secondary text-sm">Total de Partidas</span>
+              <Trophy className="text-purple-primary" size={20} />
+            </div>
+            <div className="text-3xl font-bold text-purple-primary">
+              {kpiSinuca.resumo.totalPartidas}
+            </div>
+          </div>
+
+          <div className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-text-secondary text-sm">Total de Jogadores</span>
+              <TrendingUp className="text-green-500" size={20} />
+            </div>
+            <div className="text-3xl font-bold text-green-500">
+              {kpiSinuca.resumo.totalJogadores}
+            </div>
+          </div>
+
+          <div className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-text-secondary text-sm">Taxa Média de Vitória</span>
+              <BarChart3 className="text-blue-500" size={20} />
+            </div>
+            <div className="text-3xl font-bold text-blue-500">
+              {kpiSinuca.resumo.taxaMediaVitoria}%
+            </div>
+          </div>
+
+          <div className="card shadow-lg hover:shadow-xl hover:shadow-yellow-500/20 transition">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-text-secondary text-sm">Jogador Mais Vitorioso</span>
+              <Trophy className="text-yellow-500" size={20} />
+            </div>
+            <div className="text-lg font-bold text-yellow-500">
+              {kpiSinuca.resumo.jogadorMaisVitorioso?.nome || 'N/A'}
+            </div>
+            <p className="text-xs text-text-secondary mt-1">
+              {kpiSinuca.resumo.jogadorMaisVitorioso?.vitorias || 0} vitórias
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Ranking de Jogadores */}
+      {kpiSinuca && kpiSinuca.ranking && kpiSinuca.ranking.length > 0 && (
+        <div className="card">
+          <h2 className="text-xl font-semibold text-text-primary mb-4">
+            Ranking de Jogadores
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-purple-primary/20">
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Posição
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Jogador
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Vitórias
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Derrotas
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Taxa de Vitória
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {kpiSinuca.ranking.map((jogador: any, index: number) => (
+                  <tr key={index} className="border-b border-purple-primary/10 hover:bg-card-hover transition">
+                    <td className="py-3 px-4">
+                      <span className="text-sm font-medium text-purple-primary">
+                        {index + 1}º
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary font-medium">{jogador.nome}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-green-500 font-medium">{jogador.vitorias}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-red-500 font-medium">{jogador.derrotas}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary font-medium">{jogador.taxaVitoria}%</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Filtros */}
+      <div className="card">
+        <div className="flex gap-4 items-end flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Data Início
+            </label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="input w-full"
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Data Fim
+            </label>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="input w-full"
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Status
+            </label>
+            <select
+              value={filtroStatus}
+              onChange={(e) => setFiltroStatus(e.target.value)}
+              className="input w-full"
+            >
+              <option value="TODOS">Todos</option>
+              <option value="FINALIZADA">Finalizadas</option>
+              <option value="EM_ANDAMENTO">Em Andamento</option>
+            </select>
+          </div>
+          <button
+            onClick={exportarExcel}
+            className="btn-secondary flex items-center gap-2"
+            disabled={historicoPartidas.length === 0}
+          >
+            <Download size={18} />
+            Exportar Excel
+          </button>
+        </div>
+      </div>
+
+      {/* Tabela de Histórico */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-text-primary">
+            Histórico de Partidas
+          </h2>
+          <span className="text-sm text-text-secondary">
+            {historicoPartidas.length} {historicoPartidas.length === 1 ? 'partida' : 'partidas'}
+          </span>
+        </div>
+
+        {historicoPartidas.length === 0 ? (
+          <div className="text-center py-12">
+            <Trophy className="mx-auto text-text-secondary mb-4" size={48} />
+            <p className="text-text-secondary">Nenhuma partida encontrada</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-purple-primary/20">
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Jogador 1
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Jogador 2
+                  </th>
+                  <th className="text-center py-3 px-4 text-text-secondary font-medium text-sm">
+                    Placar
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Resultado
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Tipo
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Status
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Torneio
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Data
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {historicoPartidas.map((item: any, index: number) => (
+                  <tr key={item.id} className="border-b border-purple-primary/10 hover:bg-card-hover transition">
+                    <td className="py-3 px-4">
+                      <span className={`text-sm font-medium ${item.placar1 > item.placar2 ? 'text-green-500' : 'text-text-primary'}`}>
+                        {item.jogador1}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`text-sm font-medium ${item.placar2 > item.placar1 ? 'text-green-500' : 'text-text-primary'}`}>
+                        {item.jogador2}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="text-sm font-bold text-purple-primary">
+                        {item.placar1} x {item.placar2}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">{item.resultado}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs text-text-secondary">
+                        {item.tipo === 'UNICA' ? 'Partida Única' : `Melhor de ${item.melhorDe}`}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      {item.status === 'FINALIZADA' ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500">
+                          Finalizada
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-500">
+                          Em Andamento
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs text-text-secondary">{item.torneio}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs text-text-secondary">
+                        {format(new Date(item.dataCriacao), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                       </span>
                     </td>
                   </tr>

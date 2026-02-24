@@ -721,4 +721,196 @@ router.get('/historico-comandas', async (req: Request, res: Response) => {
   }
 });
 
+// GET - Histórico de partidas de sinuca com filtros
+router.get('/historico-partidas', async (req: Request, res: Response) => {
+  try {
+    const { dataInicio, dataFim, jogadorId, status, torneioId } = req.query;
+
+    let filtro: any = {};
+
+    // Filtro de data
+    if (dataInicio || dataFim) {
+      filtro.dataCriacao = {};
+      if (dataInicio) {
+        const inicio = new Date(String(dataInicio));
+        inicio.setHours(0, 0, 0, 0);
+        filtro.dataCriacao.gte = inicio;
+      }
+      if (dataFim) {
+        const fim = new Date(String(dataFim));
+        fim.setHours(23, 59, 59, 999);
+        filtro.dataCriacao.lte = fim;
+      }
+    }
+
+    // Filtro de status
+    if (status && status !== 'TODOS') {
+      filtro.status = String(status);
+    }
+
+    // Filtro de jogador
+    if (jogadorId && jogadorId !== '') {
+      filtro.OR = [
+        { jogador1Id: String(jogadorId) },
+        { jogador2Id: String(jogadorId) }
+      ];
+    }
+
+    // Filtro de torneio
+    if (torneioId && torneioId !== '') {
+      filtro.torneioId = String(torneioId);
+    }
+
+    const partidas = await prisma.sinucaPartida.findMany({
+      where: filtro,
+      include: {
+        jogador1: { select: { id: true, nome: true } },
+        jogador2: { select: { id: true, nome: true } },
+        torneio: { select: { id: true, nome: true } }
+      },
+      orderBy: { dataCriacao: 'desc' }
+    });
+
+    const historicoFormatado = partidas.map(partida => {
+      const resultado = partida.statusPartida === 'FINALIZADA' 
+        ? partida.placar1 > partida.placar2 
+          ? `${partida.jogador1.nome} (${partida.placar1}x${partida.placar2})`
+          : `${partida.jogador2.nome} (${partida.placar2}x${partida.placar1})`
+        : 'Em andamento';
+
+      return {
+        id: partida.id,
+        jogador1: partida.jogador1.nome,
+        jogador2: partida.jogador2.nome,
+        placar1: partida.placar1,
+        placar2: partida.placar2,
+        resultado,
+        tipo: partida.tipo,
+        melhorDe: partida.melhorDe,
+        status: partida.statusPartida,
+        torneio: partida.torneio?.nome || 'Partida Única',
+        dataCriacao: partida.dataCriacao
+      };
+    });
+
+    res.json(historicoFormatado);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao buscar histórico de partidas' });
+  }
+});
+
+// GET - KPIs de Sinuca
+router.get('/kpi-sinuca', async (req: Request, res: Response) => {
+  try {
+    const { dataInicio, dataFim } = req.query;
+
+    let filtro: any = { statusPartida: 'FINALIZADA' };
+
+    // Filtro de data
+    if (dataInicio || dataFim) {
+      filtro.dataCriacao = {};
+      if (dataInicio) {
+        const inicio = new Date(String(dataInicio));
+        inicio.setHours(0, 0, 0, 0);
+        filtro.dataCriacao.gte = inicio;
+      }
+      if (dataFim) {
+        const fim = new Date(String(dataFim));
+        fim.setHours(23, 59, 59, 999);
+        filtro.dataCriacao.lte = fim;
+      }
+    } else {
+      // Por padrão, últimos 30 dias
+      const hoje = new Date();
+      const inicio = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000);
+      filtro.dataCriacao = {
+        gte: inicio,
+        lte: hoje
+      };
+    }
+
+    const partidas = await prisma.sinucaPartida.findMany({
+      where: filtro,
+      include: {
+        jogador1: { select: { id: true, nome: true } },
+        jogador2: { select: { id: true, nome: true } }
+      }
+    });
+
+    // Calcular estatísticas
+    const totalPartidas = partidas.length;
+
+    // Vitorias por jogador
+    const vitoriasPorJogador: { [key: string]: { nome: string; vitorias: number; derrotas: number; taxaVitoria: number } } = {};
+
+    partidas.forEach(partida => {
+      const j1 = partida.jogador1;
+      const j2 = partida.jogador2;
+
+      if (!vitoriasPorJogador[j1.id]) {
+        vitoriasPorJogador[j1.id] = { nome: j1.nome, vitorias: 0, derrotas: 0, taxaVitoria: 0 };
+      }
+      if (!vitoriasPorJogador[j2.id]) {
+        vitoriasPorJogador[j2.id] = { nome: j2.nome, vitorias: 0, derrotas: 0, taxaVitoria: 0 };
+      }
+
+      if (partida.placar1 > partida.placar2) {
+        vitoriasPorJogador[j1.id].vitorias++;
+        vitoriasPorJogador[j2.id].derrotas++;
+      } else {
+        vitoriasPorJogador[j2.id].vitorias++;
+        vitoriasPorJogador[j1.id].derrotas++;
+      }
+    });
+
+    // Calcular taxa de vitória
+    Object.values(vitoriasPorJogador).forEach(jogador => {
+      const totalPartidasJogador = jogador.vitorias + jogador.derrotas;
+      jogador.taxaVitoria = totalPartidasJogador > 0 
+        ? Math.round((jogador.vitorias / totalPartidasJogador) * 100)
+        : 0;
+    });
+
+    // Ranking de vencedores
+    const ranking = Object.values(vitoriasPorJogador)
+      .sort((a, b) => b.vitorias - a.vitorias)
+      .slice(0, 10);
+
+    // Tipos de partidas
+    const tiposPartidas: { [key: string]: number } = {};
+    partidas.forEach(p => {
+      const tipo = p.tipo === 'UNICA' ? 'Partida Única' : `Melhor de ${p.melhorDe}`;
+      tiposPartidas[tipo] = (tiposPartidas[tipo] || 0) + 1;
+    });
+
+    // Jogador mais vitorioso
+    const jogadorMaisVitorioso = ranking.length > 0 ? ranking[0] : null;
+
+    // Taxa média de vitória
+    const taxaMediaVitoria = Object.values(vitoriasPorJogador).length > 0
+      ? Math.round(
+          Object.values(vitoriasPorJogador).reduce((sum, j) => sum + j.taxaVitoria, 0) / 
+          Object.values(vitoriasPorJogador).length
+        )
+      : 0;
+
+    res.json({
+      resumo: {
+        totalPartidas,
+        totalJogadores: Object.keys(vitoriasPorJogador).length,
+        taxaMediaVitoria,
+        jogadorMaisVitorioso
+      },
+      ranking,
+      tiposPartidas,
+      periodo: {
+        dataInicio: filtro.dataCriacao?.gte || 'Sem data inicial',
+        dataFim: filtro.dataCriacao?.lte || 'Sem data final'
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao buscar KPI de sinuca' });
+  }
+});
+
 export default router;

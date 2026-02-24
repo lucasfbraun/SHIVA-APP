@@ -88,5 +88,25 @@ export const relatorioService = {
     
     const { data } = await api.get(`/relatorios/historico-comandas?${params}`);
     return data;
+  },
+
+  async getHistoricoPartidas(dataInicio?: string, dataFim?: string, jogadorId?: string, status?: string) {
+    const params = new URLSearchParams();
+    if (dataInicio) params.append('dataInicio', dataInicio);
+    if (dataFim) params.append('dataFim', dataFim);
+    if (jogadorId) params.append('jogadorId', jogadorId);
+    if (status) params.append('status', status);
+    
+    const { data } = await api.get(`/relatorios/historico-partidas?${params}`);
+    return data;
+  },
+
+  async getKPISinuca(dataInicio?: string, dataFim?: string) {
+    const params = new URLSearchParams();
+    if (dataInicio) params.append('dataInicio', dataInicio);
+    if (dataFim) params.append('dataFim', dataFim);
+    
+    const { data } = await api.get(`/relatorios/kpi-sinuca?${params}`);
+    return data;
   }
 };
