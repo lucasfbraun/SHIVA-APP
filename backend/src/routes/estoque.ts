@@ -273,7 +273,14 @@ router.get('/entradas', async (req: Request, res: Response) => {
     }
     
     if (tipoMovimento) {
-      where.tipoMovimento = String(tipoMovimento).toUpperCase();
+      const movimento = String(tipoMovimento).toUpperCase();
+      // Se for "COMANDA", filtra apenas saídas que tem comandaId
+      if (movimento === 'COMANDA') {
+        where.tipoMovimento = 'SAIDA';
+        where.comandaId = { not: null };
+      } else {
+        where.tipoMovimento = movimento;
+      }
     }
     
     if (dataInicio || dataFim) {
@@ -296,6 +303,11 @@ router.get('/entradas', async (req: Request, res: Response) => {
             categoria: true,
             codigoInterno: true,
             codigoBarras: true
+          }
+        },
+        comanda: {
+          select: {
+            numeroComanda: true
           }
         }
       },

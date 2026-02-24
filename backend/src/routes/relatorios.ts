@@ -660,4 +660,65 @@ router.get('/vendas/faturamento-abonado', async (req: Request, res: Response) =>
   }
 });
 
+// GET - Histórico de comandas com itens detalhados
+router.get('/historico-comandas', async (req: Request, res: Response) => {
+  try {
+    const { dataInicio, dataFim } = req.query;
+
+    let filtroData: any = {};
+    if (dataInicio && dataFim) {
+      const inicio = new Date(String(dataInicio));
+      inicio.setHours(0, 0, 0, 0);
+      const fim = new Date(String(dataFim));
+      fim.setHours(23, 59, 59, 999);
+      filtroData = {
+        gte: inicio,
+        lte: fim
+      };
+    } else {
+      // Se não informar datas, últimos 30 dias
+      const hoje = new Date();
+      const inicio = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000);
+      filtroData = {
+        gte: inicio,
+        lte: hoje
+      };
+    }
+
+    const comandas = await prisma.comanda.findMany({
+      where: {
+        status: 'FECHADA',
+        dataFechamento: filtroData
+      },
+      include: {
+        itens: {
+          include: {
+            produto: {
+              select: { nome: true }
+            }
+          }
+        }
+      },
+      orderBy: { dataFechamento: 'desc' }
+    });
+
+    // Formatar dados em linhas por item
+    const historico = comandas.flatMap(comanda => 
+      comanda.itens.map(item => ({
+        numeroComanda: comanda.numeroComanda,
+        nomeCliente: comanda.nomeCliente,
+        nomeProduto: item.nomeProduto,
+        quantidade: item.quantidade,
+        abonado: item.abonado,
+        subtotal: Math.round(item.subtotal * 100) / 100,
+        dataFechamento: comanda.dataFechamento
+      }))
+    );
+
+    res.json(historico);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao buscar histórico de comandas' });
+  }
+});
+
 export default router;

@@ -9,6 +9,7 @@ export interface EntradaEstoque {
   numeroCupom: string | null;
   tipoEntrada: 'MANUAL' | 'OCR';
   tipoMovimento: 'ENTRADA' | 'SAIDA';
+  comandaId: string | null;
   observacao: string | null;
   criadoEm: string;
   produto: {
@@ -18,13 +19,16 @@ export interface EntradaEstoque {
     codigoInterno: string | null;
     codigoBarras: string | null;
   };
+  comanda?: {
+    numeroComanda: number;
+  } | null;
 }
 
 export const estoqueService = {
   async getEntradas(filtros?: {
     produtoId?: string;
     tipoEntrada?: 'MANUAL' | 'OCR';
-    tipoMovimento?: 'ENTRADA' | 'SAIDA';
+    tipoMovimento?: 'ENTRADA' | 'SAIDA' | 'COMANDA';
     dataInicio?: string;
     dataFim?: string;
   }) {

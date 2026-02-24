@@ -12,7 +12,7 @@ import { ptBR } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 
 export default function Relatorios() {
-  const [abaSelecionada, setAbaSelecionada] = useState<'vendas' | 'despesas' | 'estoque'>('vendas');
+  const [abaSelecionada, setAbaSelecionada] = useState<'vendas' | 'despesas' | 'estoque' | 'historico'>('vendas');
   const [loading, setLoading] = useState(true);
   
   // Vendas
@@ -35,7 +35,7 @@ export default function Relatorios() {
   // Estoque
   const [entradas, setEntradas] = useState<EntradaEstoque[]>([]);
   const [filtroTipo, setFiltroTipo] = useState<'TODOS' | 'MANUAL' | 'OCR'>('TODOS');
-  const [filtroMovimento, setFiltroMovimento] = useState<'TODOS' | 'ENTRADA' | 'SAIDA'>('TODOS');
+  const [filtroMovimento, setFiltroMovimento] = useState<'TODOS' | 'ENTRADA' | 'SAIDA' | 'COMANDA'>('TODOS');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [produtoId, setProdutoId] = useState('');
@@ -43,6 +43,11 @@ export default function Relatorios() {
   const [buscaProduto, setBuscaProduto] = useState('');
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+
+  // Histórico
+  const [historico, setHistorico] = useState<any[]>([]);
+  const [dataInicioHistorico, setDataInicioHistorico] = useState('');
+  const [dataFimHistorico, setDataFimHistorico] = useState('');
 
   useEffect(() => {
     loadProdutos();
@@ -55,8 +60,10 @@ export default function Relatorios() {
       loadRelatorioDespesas();
     } else if (abaSelecionada === 'estoque') {
       loadRelatorioEstoque();
+    } else if (abaSelecionada === 'historico') {
+      loadRelatorioHistorico();
     }
-  }, [abaSelecionada, mesVendas, anoVendas, todosMesesVendas, mes, ano, filtroTipo, filtroMovimento, dataInicio, dataFim, produtoId]);
+  }, [abaSelecionada, mesVendas, anoVendas, todosMesesVendas, mes, ano, filtroTipo, filtroMovimento, dataInicio, dataFim, produtoId, dataInicioHistorico, dataFimHistorico]);
 
   const loadProdutos = async () => {
     try {
@@ -186,6 +193,22 @@ export default function Relatorios() {
     }
   };
 
+  const loadRelatorioHistorico = async () => {
+    try {
+      setLoading(true);
+      const data = await relatorioService.getHistoricoComandas(
+        dataInicioHistorico || undefined,
+        dataFimHistorico || undefined
+      );
+      setHistorico(data);
+    } catch (error) {
+      console.error('Erro ao buscar histórico de comandas:', error);
+      setHistorico([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getMesNome = (m: number) => {
     return new Date(2024, m - 1).toLocaleString('pt-BR', { month: 'long' });
   };
@@ -258,6 +281,23 @@ export default function Relatorios() {
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-primary to-purple-highlight rounded-t"></div>
           )}
         </button>
+
+        <button
+          onClick={() => setAbaSelecionada('historico')}
+          className={`px-4 py-3 font-medium transition relative ${
+            abaSelecionada === 'historico'
+              ? 'text-purple-primary'
+              : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <FileText size={18} />
+            Histórico Comandas
+          </div>
+          {abaSelecionada === 'historico' && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-primary to-purple-highlight rounded-t"></div>
+          )}
+        </button>
       </div>
 
       {/* Conteúdo das Abas */}
@@ -287,7 +327,7 @@ export default function Relatorios() {
           resumoDespesas={resumoDespesas}
           getMesNome={getMesNome}
         />
-      ) : (
+      ) : abaSelecionada === 'estoque' ? (
         <RelatorioEstoqueContent
           entradas={entradas}
           filtroTipo={filtroTipo}
@@ -307,6 +347,14 @@ export default function Relatorios() {
           setProdutoSelecionado={setProdutoSelecionado}
           mostrarSugestoes={mostrarSugestoes}
           setMostrarSugestoes={setMostrarSugestoes}
+        />
+      ) : (
+        <RelatorioHistoricoContent
+          historico={historico}
+          dataInicio={dataInicioHistorico}
+          setDataInicio={setDataInicioHistorico}
+          dataFim={dataFimHistorico}
+          setDataFim={setDataFimHistorico}
         />
       )}
     </div>
@@ -680,6 +728,7 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
       'Quantidade': entrada.quantidade,
       'Custo Unitário': parseFloat(entrada.custoUnitario.toFixed(2)),
       'Total': parseFloat((entrada.quantidade * entrada.custoUnitario).toFixed(2)),
+      'Comanda': entrada.comanda ? `#${entrada.comanda.numeroComanda}` : '-',
       'Movimento': entrada.tipoMovimento === 'ENTRADA' ? 'Entrada' : 'Saída',
       'Tipo': entrada.tipoEntrada === 'MANUAL' ? 'Manual' : 'OCR',
       'Nº Cupom': entrada.numeroCupom || '-',
@@ -698,6 +747,7 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
       { wch: 12 }, // Quantidade
       { wch: 15 }, // Custo Unitário
       { wch: 15 }, // Total
+      { wch: 12 }, // Comanda
       { wch: 12 }, // Movimento
       { wch: 10 }, // Tipo
       { wch: 12 }, // Nº Cupom
@@ -812,6 +862,7 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
               <option value="TODOS">Todos</option>
               <option value="ENTRADA">Entrada</option>
               <option value="SAIDA">Saída</option>
+              <option value="COMANDA">Comanda</option>
             </select>
           </div>
 
@@ -920,6 +971,7 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Qtd</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Custo Unit.</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Total</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Comanda</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Movimento</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Tipo</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Nº Cupom</th>
@@ -957,6 +1009,15 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
                       </span>
                     </td>
                     <td className="py-3 px-4">
+                      {entrada.comanda ? (
+                        <span className="text-sm font-medium text-purple-primary">
+                          #{entrada.comanda.numeroComanda}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-text-secondary">-</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
                       {entrada.tipoMovimento === 'ENTRADA' ? (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-action/10 text-green-action">
                           <ArrowDownCircle size={12} className="mr-1" />
@@ -989,6 +1050,157 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
                     <td className="py-3 px-4">
                       <span className="text-xs text-text-secondary truncate max-w-xs block">
                         {entrada.observacao || '-'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Componente de Relatório de Histórico de Comandas
+function RelatorioHistoricoContent({ historico, dataInicio, setDataInicio, dataFim, setDataFim }: any) {
+  const exportarExcel = () => {
+    const dadosExport = historico.map((item: any) => ({
+      'Comanda': item.numeroComanda,
+      'Cliente': item.nomeCliente,
+      'Produto': item.nomeProduto,
+      'Quantidade': item.quantidade,
+      'Abonado': item.abonado ? 'Sim' : 'Não',
+      'Valor': `R$ ${item.subtotal.toFixed(2)}`,
+      'Data': format(new Date(item.dataFechamento), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dadosExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Histórico');
+    XLSX.writeFile(wb, `historico-comandas-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Filtros */}
+      <div className="card">
+        <div className="flex gap-4 items-end flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Data Início
+            </label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="input w-full"
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Data Fim
+            </label>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="input w-full"
+            />
+          </div>
+          <button
+            onClick={exportarExcel}
+            className="btn-secondary flex items-center gap-2"
+            disabled={historico.length === 0}
+          >
+            <Download size={18} />
+            Exportar Excel
+          </button>
+        </div>
+      </div>
+
+      {/* Tabela */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-text-primary">
+            Histórico de Comandas
+          </h2>
+          <span className="text-sm text-text-secondary">
+            {historico.length} {historico.length === 1 ? 'item' : 'itens'}
+          </span>
+        </div>
+
+        {historico.length === 0 ? (
+          <div className="text-center py-12">
+            <FileText className="mx-auto text-text-secondary mb-4" size={48} />
+            <p className="text-text-secondary">Nenhum registro encontrado</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-purple-primary/20">
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Comanda
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Cliente
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Produto
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Quantidade
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Abonado
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Valor
+                  </th>
+                  <th className="text-left py-3 px-4 text-text-secondary font-medium text-sm">
+                    Data
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {historico.map((item: any, index: number) => (
+                  <tr key={index} className="border-b border-purple-primary/10 hover:bg-card-hover transition">
+                    <td className="py-3 px-4">
+                      <span className="text-sm font-medium text-purple-primary">
+                        #{item.numeroComanda}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">{item.nomeCliente}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">{item.nomeProduto}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-text-primary">{item.quantidade}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      {item.abonado ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-500">
+                          <Gift size={12} className="mr-1" />
+                          Sim
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-500/10 text-gray-500">
+                          Não
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-sm font-medium text-text-primary">
+                        R$ {item.subtotal.toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs text-text-secondary">
+                        {format(new Date(item.dataFechamento), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                       </span>
                     </td>
                   </tr>

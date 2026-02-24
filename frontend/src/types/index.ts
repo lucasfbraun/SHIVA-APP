@@ -117,3 +117,66 @@ export interface DashboardData {
   }>;
   faturamentoPorDia: { [key: string]: number };
 }
+
+export type SinucaTipoPartida = 'UNICA' | 'MELHOR_DE';
+export type SinucaStatusPartida = 'PENDENTE' | 'EM_ANDAMENTO' | 'FINALIZADA' | 'CANCELADA';
+
+export interface SinucaPartida {
+  id: string;
+  tipo: SinucaTipoPartida;
+  melhorDe: number;
+  clienteAId: string;
+  clienteBId: string;
+  vitoriasA: number;
+  vitoriasB: number;
+  status: SinucaStatusPartida;
+  vencedorId?: string | null;
+  observacao?: string | null;
+  criadoEm: string;
+  atualizadoEm: string;
+  clienteA?: { id: string; nomeCompleto: string };
+  clienteB?: { id: string; nomeCompleto: string };
+  vencedor?: { id: string; nomeCompleto: string } | null;
+}
+
+export type SinucaTipoTorneio = 'TODOS_CONTRA_TODOS' | 'CHAVEAMENTO';
+export type SinucaStatusTorneio = 'RASCUNHO' | 'EM_ANDAMENTO' | 'FINALIZADO';
+
+export interface SinucaTorneioParticipante {
+  id: string;
+  torneioId: string;
+  clienteId: string;
+  pontos: number;
+  vitorias: number;
+  derrotas: number;
+  cliente?: { id: string; nomeCompleto: string };
+}
+
+export interface SinucaTorneioPartida {
+  id: string;
+  torneioId: string;
+  rodada: number;
+  clienteAId: string;
+  clienteBId: string;
+  vitoriasA: number;
+  vitoriasB: number;
+  status: SinucaStatusPartida;
+  vencedorId?: string | null;
+  melhorDe: number;
+  clienteA?: { id: string; nomeCompleto: string };
+  clienteB?: { id: string; nomeCompleto: string };
+  vencedor?: { id: string; nomeCompleto: string } | null;
+}
+
+export interface SinucaTorneio {
+  id: string;
+  nome: string;
+  tipo: SinucaTipoTorneio;
+  melhorDe: number;
+  status: SinucaStatusTorneio;
+  criadoEm: string;
+  atualizadoEm: string;
+  participantes?: SinucaTorneioParticipante[];
+  partidas?: SinucaTorneioPartida[];
+  _count?: { participantes: number; partidas: number };
+}

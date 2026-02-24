@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, DollarSign, ShoppingCart, Package } from 'lucide-react';
+import { TrendingUp, DollarSign, ShoppingCart, Package, Trophy } from 'lucide-react';
 import { relatorioService } from '@/services/relatorioService';
 import { DashboardData } from '@/types';
 
@@ -135,7 +135,7 @@ export default function Dashboard() {
       </div>
 
       {/* Ações Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Link
           to="/produtos/novo"
           className="card text-center hover:scale-105 transition-transform cursor-pointer"
@@ -161,6 +161,15 @@ export default function Dashboard() {
           <TrendingUp className="text-purple-primary mx-auto mb-3" size={32} />
           <h3 className="font-semibold text-text-primary">Ver Relatórios</h3>
           <p className="text-sm text-text-secondary mt-1">Análises detalhadas</p>
+        </Link>
+
+        <Link
+          to="/sinuca"
+          className="card text-center hover:scale-105 transition-transform cursor-pointer"
+        >
+          <Trophy className="text-purple-primary mx-auto mb-3" size={32} />
+          <h3 className="font-semibold text-text-primary">Sinuca</h3>
+          <p className="text-sm text-text-secondary mt-1">Partidas e torneios</p>
         </Link>
       </div>
     </div>

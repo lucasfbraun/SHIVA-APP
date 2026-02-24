@@ -67,10 +67,12 @@ model EntradaEstoque {
   numeroCupom     String?
   tipoEntrada     String   @default("MANUAL") // MANUAL, OCR
   tipoMovimento   String   @default("ENTRADA") // ENTRADA, SAIDA
+  comandaId       String?
   observacao      String?
   criadoEm        DateTime @default(now())
 
   produto         Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  comanda         Comanda? @relation(fields: [comandaId], references: [id], onDelete: SetNull)
   
   @@map("entradas_estoque")
 }
@@ -91,6 +93,7 @@ model Comanda {
   observacao      String?
 
   itens           ItemComanda[]
+  entradasEstoque EntradaEstoque[]
   cliente         Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   
   @@map("comandas")
@@ -108,6 +111,13 @@ model Cliente {
   atualizadoEm    DateTime @updatedAt
 
   comandas        Comanda[]
+  sinucaPartidasA SinucaPartida[] @relation("SinucaPartidaClienteA")
+  sinucaPartidasB SinucaPartida[] @relation("SinucaPartidaClienteB")
+  sinucaPartidasVencidas SinucaPartida[] @relation("SinucaPartidaVencedor")
+  sinucaTorneioParticipacoes SinucaTorneioParticipante[]
+  sinucaTorneioPartidasA SinucaTorneioPartida[] @relation("SinucaTorneioPartidaClienteA")
+  sinucaTorneioPartidasB SinucaTorneioPartida[] @relation("SinucaTorneioPartidaClienteB")
+  sinucaTorneioPartidasVencidas SinucaTorneioPartida[] @relation("SinucaTorneioPartidaVencedor")
   
   @@map("clientes")
 }
@@ -177,4 +187,80 @@ model EngenhariaProduto {
 
   @@unique([produtoId, componenteId])
   @@map("engenharia_produtos")
+}
+
+model SinucaPartida {
+  id           String   @id @default(uuid())
+  tipo         String   @default("UNICA") // UNICA, MELHOR_DE
+  melhorDe     Int      @default(1)
+  clienteAId   String
+  clienteBId   String
+  vitoriasA    Int      @default(0)
+  vitoriasB    Int      @default(0)
+  status       String   @default("PENDENTE") // PENDENTE, EM_ANDAMENTO, FINALIZADA, CANCELADA
+  vencedorId   String?
+  observacao   String?
+  iniciadoEm   DateTime?
+  finalizadoEm DateTime?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  clienteA     Cliente  @relation("SinucaPartidaClienteA", fields: [clienteAId], references: [id])
+  clienteB     Cliente  @relation("SinucaPartidaClienteB", fields: [clienteBId], references: [id])
+  vencedor     Cliente? @relation("SinucaPartidaVencedor", fields: [vencedorId], references: [id])
+
+  @@map("sinuca_partidas")
+}
+
+model SinucaTorneio {
+  id           String   @id @default(uuid())
+  nome         String
+  tipo         String   @default("TODOS_CONTRA_TODOS") // TODOS_CONTRA_TODOS, CHAVEAMENTO
+  melhorDe     Int      @default(3)
+  status       String   @default("RASCUNHO") // RASCUNHO, EM_ANDAMENTO, FINALIZADO
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  participantes SinucaTorneioParticipante[]
+  partidas      SinucaTorneioPartida[]
+
+  @@map("sinuca_torneios")
+}
+
+model SinucaTorneioParticipante {
+  id         String   @id @default(uuid())
+  torneioId  String
+  clienteId  String
+  pontos     Int      @default(0)
+  vitorias   Int      @default(0)
+  derrotas   Int      @default(0)
+  criadoEm   DateTime @default(now())
+
+  torneio    SinucaTorneio @relation(fields: [torneioId], references: [id], onDelete: Cascade)
+  cliente    Cliente       @relation(fields: [clienteId], references: [id])
+
+  @@unique([torneioId, clienteId])
+  @@map("sinuca_torneio_participantes")
+}
+
+model SinucaTorneioPartida {
+  id         String   @id @default(uuid())
+  torneioId  String
+  rodada     Int
+  clienteAId String
+  clienteBId String
+  vitoriasA  Int      @default(0)
+  vitoriasB  Int      @default(0)
+  status     String   @default("PENDENTE") // PENDENTE, EM_ANDAMENTO, FINALIZADA, CANCELADA
+  vencedorId String?
+  melhorDe   Int
+  criadoEm   DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  torneio    SinucaTorneio @relation(fields: [torneioId], references: [id], onDelete: Cascade)
+  clienteA   Cliente       @relation("SinucaTorneioPartidaClienteA", fields: [clienteAId], references: [id])
+  clienteB   Cliente       @relation("SinucaTorneioPartidaClienteB", fields: [clienteBId], references: [id])
+  vencedor   Cliente?      @relation("SinucaTorneioPartidaVencedor", fields: [vencedorId], references: [id])
+
+  @@map("sinuca_torneio_partidas")
 }

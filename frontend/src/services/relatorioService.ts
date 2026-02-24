@@ -79,5 +79,14 @@ export const relatorioService = {
     
     const { data } = await api.get(`/relatorios/top-clientes/ranking?${params}`);
     return data;
+  },
+
+  async getHistoricoComandas(dataInicio?: string, dataFim?: string) {
+    const params = new URLSearchParams();
+    if (dataInicio) params.append('dataInicio', dataInicio);
+    if (dataFim) params.append('dataFim', dataFim);
+    
+    const { data } = await api.get(`/relatorios/historico-comandas?${params}`);
+    return data;
   }
 };

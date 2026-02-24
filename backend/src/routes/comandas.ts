@@ -272,6 +272,20 @@ router.post('/:id/fechar', async (req: Request, res: Response) => {
               quantidade: { decrement: item.quantidade }
             }
           });
+
+          // Registrar movimento de estoque (saída por comanda)
+          await tx.entradaEstoque.create({
+            data: {
+              produtoId: item.produtoId,
+              quantidade: item.quantidade,
+              custoUnitario: item.custoUnitario,
+              dataEntrada: new Date(),
+              tipoEntrada: 'MANUAL',
+              tipoMovimento: 'SAIDA',
+              comandaId: id,
+              observacao: `Saída por comanda #${comanda.numeroComanda}`
+            }
+          });
         }
 
         // Buscar engenharia do produto para baixar estoque dos componentes
@@ -290,6 +304,20 @@ router.post('/:id/fechar', async (req: Request, res: Response) => {
               where: { produtoId: engenharia.componenteId },
               data: {
                 quantidade: { decrement: qtdComponente }
+              }
+            });
+
+            // Registrar movimento de estoque do componente (saída por comanda)
+            await tx.entradaEstoque.create({
+              data: {
+                produtoId: engenharia.componenteId,
+                quantidade: qtdComponente,
+                custoUnitario: engenharia.componente.custoMedio || 0,
+                dataEntrada: new Date(),
+                tipoEntrada: 'MANUAL',
+                tipoMovimento: 'SAIDA',
+                comandaId: id,
+                observacao: `Saída por comanda #${comanda.numeroComanda} (componente de ${item.nomeProduto})`
               }
             });
           }
