@@ -273,6 +273,27 @@ router.post('/:id/fechar', async (req: Request, res: Response) => {
             }
           });
         }
+
+        // Buscar engenharia do produto para baixar estoque dos componentes
+        const engenharias = await tx.engenhariaProduto.findMany({
+          where: { produtoId: item.produtoId },
+          include: { componente: true }
+        });
+
+        // Dar baixa no estoque de cada componente
+        for (const engenharia of engenharias) {
+          const qtdComponente = item.quantidade * engenharia.quantidade;
+          
+          // Só dar baixa se o componente controla estoque
+          if (engenharia.componente.controlaEstoque !== false) {
+            await tx.estoque.update({
+              where: { produtoId: engenharia.componenteId },
+              data: {
+                quantidade: { decrement: qtdComponente }
+              }
+            });
+          }
+        }
       }
       
       // Fechar comanda
