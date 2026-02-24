@@ -190,7 +190,11 @@ router.get('/resumo', async (req: Request, res: Response) => {
     let custoTotal = 0;
 
     itens.forEach(item => {
-      faturamentoTotal += item.subtotal;
+      // Faturamento total: EXCLUI itens abonados (não foram pagos)
+      if (!item.abonado) {
+        faturamentoTotal += item.subtotal;
+      }
+      // Custo total: INCLUI todos os itens (mesmo abonados, pois a empresa teve o custo)
       custoTotal += item.quantidade * (item.produto.custoMedio || 0);
     });
 
