@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
-import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter, Search, X, ArrowDownCircle, ArrowUpCircle, Download } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, BarChart3, TrendingDown, ShoppingCart, AlertCircle, Zap, Calendar, FileText, Filter, Search, X, ArrowDownCircle, ArrowUpCircle, Download, Gift } from 'lucide-react';
 import { relatorioService } from '@/services/relatorioService';
 import { despesaService } from '@/services/despesaService';
 import { estoqueService, EntradaEstoque } from '@/services/estoqueService';
 import { produtoService } from '@/services/produtoService';
+import { kpiService, KPIFaturamentoAbonado } from '@/services/kpiService';
 import { Produto } from '@/types';
 import { GraficoFaturamentoVsDespesasVsLucro, GraficoMargensBrutaVsLiquida } from '@/components/GraficosRelatorio';
 import { format } from 'date-fns';
@@ -24,6 +25,7 @@ export default function Relatorios() {
   const [topClientes, setTopClientes] = useState<any[]>([]);
   const [resumo, setResumo] = useState<any>(null);
   const [dadosMensais, setDadosMensais] = useState<any[]>([]);
+  const [kpiAbonado, setKpiAbonado] = useState<KPIFaturamentoAbonado | null>(null);
 
   // Despesas
   const [mes, setMes] = useState(new Date().getMonth() + 1);
@@ -91,13 +93,14 @@ export default function Relatorios() {
       console.log('Data início:', dataInicio.toISOString());
       console.log('Data fim:', dataFim.toISOString());
 
-      const [ticketData, produtosData, margemData, clientesData, resumoData, dadosMensaisData] = await Promise.all([
+      const [ticketData, produtosData, margemData, clientesData, resumoData, dadosMensaisData, kpiAbonadoData] = await Promise.all([
         relatorioService.getTicketMedio(dataInicio.toISOString(), dataFim.toISOString()),
         relatorioService.getProdutosMaisVendidos(5, dataInicio.toISOString(), dataFim.toISOString()),
         relatorioService.getMargemLucro(dataInicio.toISOString(), dataFim.toISOString()),
         relatorioService.getTopClientes(10, dataInicio.toISOString(), dataFim.toISOString()),
         relatorioService.getResumo(dataInicio.toISOString(), dataFim.toISOString()),
-        relatorioService.getMensal(12)
+        relatorioService.getMensal(12),
+        kpiService.getFaturamentoAbonado(dataInicio.toISOString(), dataFim.toISOString())
       ]);
 
       console.log('✅ Todos os endpoints retornados');
@@ -122,6 +125,7 @@ export default function Relatorios() {
       console.log('📊 Meses processados:', meses);
       console.log('📊 Quantidade de meses:', meses.length);
       setDadosMensais(meses);
+      setKpiAbonado(kpiAbonadoData || null);
     } catch (error) {
       console.error('Erro ao carregar relatórios:', error);
       setTicketMedio(0);
@@ -130,6 +134,7 @@ export default function Relatorios() {
       setTopClientes([]);
       setResumo(null);
       setDadosMensais([]);
+      setKpiAbonado(null);
     } finally {
       setLoading(false);
     }
@@ -270,6 +275,7 @@ export default function Relatorios() {
           margemLucro={margemLucro}
           resumo={resumo}
           dadosMensais={dadosMensais}
+          kpiAbonado={kpiAbonado}
           getMesNome={getMesNome}
         />
       ) : abaSelecionada === 'despesas' ? (
@@ -308,7 +314,7 @@ export default function Relatorios() {
 }
 
 // Componente de Relatório de Vendas
-function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, todosMesesVendas, setTodosMesesVendas, ticketMedio, topProdutos, topClientes, margemLucro, resumo, dadosMensais, getMesNome }: any) {
+function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, todosMesesVendas, setTodosMesesVendas, ticketMedio, topProdutos, topClientes, margemLucro, resumo, dadosMensais, kpiAbonado, getMesNome }: any) {
   console.log('📋 RelatorioVendas renderizando');
   console.log('📋 dadosMensais prop:', dadosMensais);
   console.log('📋 Tipo de dadosMensais:', typeof dadosMensais);
@@ -359,7 +365,7 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tod
       </div>
 
       {/* Cards com métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         <div key="faturamento" className="card shadow-lg hover:shadow-xl hover:shadow-purple-primary/20 transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-text-secondary text-sm">Faturamento Total</span>
@@ -378,6 +384,17 @@ function RelatorioVendas({ mesVendas, setMesVendas, anoVendas, setAnoVendas, tod
           </div>
           <div className="text-3xl font-bold text-orange-500">
             R$ {resumo?.custoTotal?.toFixed(2) || '0.00'}
+          </div>
+          <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
+        </div>
+
+        <div key="faturamento-abonado" className="card shadow-lg hover:shadow-xl hover:shadow-yellow-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Valor faturado com abono</span>
+            <Gift className="text-yellow-500" size={20} />
+          </div>
+          <div className="text-3xl font-bold text-yellow-500">
+            R$ {kpiAbonado?.totalAbonado?.toFixed(2) || '0.00'}
           </div>
           <p className="text-text-secondary text-xs mt-2">{getPeriodoTexto()}</p>
         </div>
