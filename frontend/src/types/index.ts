@@ -118,6 +118,51 @@ export interface DashboardData {
   faturamentoPorDia: { [key: string]: number };
 }
 
+export type VendaStatus = 'ABERTA' | 'FINALIZADA' | 'CANCELADA';
+export type TipoPagamento = 'DINHEIRO' | 'CARTAO' | 'FIADO';
+export type TipoDesconto = 'VALOR' | 'PERCENTUAL';
+
+export interface ItemVenda {
+  id: string;
+  vendaId: string;
+  produtoId: string;
+  nomeProduto: string;
+  quantidade: number;
+  precoUnitario: number;
+  custoUnitario: number;
+  desconto: number;
+  tipoDesconto: TipoDesconto;
+  subtotal: number;
+  criadoEm: string;
+  produto?: {
+    nome: string;
+    imagemUrl?: string;
+  };
+}
+
+export interface Venda {
+  id: string;
+  numeroVenda: number;
+  clienteId?: string | null;
+  nomeCliente?: string | null;
+  status: VendaStatus;
+  subtotal: number;
+  desconto: number;
+  tipoDesconto: TipoDesconto;
+  total: number;
+  valorPago: number;
+  valorRestante: number;
+  tipoPagamento: TipoPagamento;
+  dataAbertura: string;
+  dataFechamento?: string | null;
+  observacao?: string | null;
+  itens?: ItemVenda[];
+  cliente?: {
+    id: string;
+    nomeCompleto: string;
+  } | null;
+}
+
 export type SinucaTipoPartida = 'UNICA' | 'MELHOR_DE';
 export type SinucaStatusPartida = 'PENDENTE' | 'EM_ANDAMENTO' | 'FINALIZADA' | 'CANCELADA';
 

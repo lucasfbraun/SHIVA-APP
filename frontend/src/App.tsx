@@ -13,6 +13,7 @@ import OCRCupom from './pages/OCRCupom';
 import Despesas from './pages/Despesas';
 import MovimentoEstoque from './pages/MovimentoEstoque';
 import Sinuca from './pages/Sinuca';
+import Vendas from './pages/Vendas';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route path="estoque" element={<MovimentoEstoque />} />
         <Route path="ocr" element={<OCRCupom />} />
         <Route path="sinuca" element={<Sinuca />} />
+        <Route path="vendas" element={<Vendas />} />
       </Route>
     </Routes>
   );

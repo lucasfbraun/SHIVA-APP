@@ -10,6 +10,7 @@ import ocrRouter from './routes/ocr';
 import despesasRouter from './routes/despesas';
 import clientesRouter from './routes/clientes';
 import sinucaRouter from './routes/sinuca';
+import vendasRouter from './routes/vendas';
 import { authMiddleware } from './lib/authMiddleware';
 
 dotenv.config();
@@ -42,6 +43,7 @@ app.use('/api/ocr', authMiddleware, ocrRouter);
 app.use('/api/despesas', authMiddleware, despesasRouter);
 app.use('/api/clientes', authMiddleware, clientesRouter);
 app.use('/api/sinuca', authMiddleware, sinucaRouter);
+app.use('/api/vendas', authMiddleware, vendasRouter);
 
 // Error handler
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

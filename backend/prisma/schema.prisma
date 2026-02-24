@@ -41,6 +41,7 @@ model Produto {
   estoque         Estoque?
   entradasEstoque EntradaEstoque[]
   itensComanda    ItemComanda[]
+  itensVenda      ItemVenda[]
   engenharias     EngenhariaProduto[] @relation("ProdutoComponente")
   engenhariasParent EngenhariaProduto[] @relation("ProdutoPrincipal")
   
@@ -111,6 +112,7 @@ model Cliente {
   atualizadoEm    DateTime @updatedAt
 
   comandas        Comanda[]
+  vendas          Venda[]
   sinucaPartidasA SinucaPartida[] @relation("SinucaPartidaClienteA")
   sinucaPartidasB SinucaPartida[] @relation("SinucaPartidaClienteB")
   sinucaPartidasVencidas SinucaPartida[] @relation("SinucaPartidaVencedor")
@@ -187,6 +189,48 @@ model EngenhariaProduto {
 
   @@unique([produtoId, componenteId])
   @@map("engenharia_produtos")
+}
+
+model Venda {
+  id              String   @id @default(uuid())
+  numeroVenda     Int      @unique
+  clienteId       String?
+  nomeCliente     String?
+  status          String   @default("ABERTA") // ABERTA, FINALIZADA, CANCELADA
+  subtotal        Float    @default(0)
+  desconto        Float    @default(0)
+  tipoDesconto    String   @default("VALOR") // VALOR, PERCENTUAL
+  total           Float    @default(0)
+  valorPago       Float    @default(0)
+  valorRestante   Float    @default(0)
+  tipoPagamento   String   @default("DINHEIRO") // DINHEIRO, CARTAO, FIADO
+  dataAbertura    DateTime @default(now())
+  dataFechamento  DateTime?
+  observacao      String?
+
+  itens           ItemVenda[]
+  cliente         Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+
+  @@map("vendas")
+}
+
+model ItemVenda {
+  id              String   @id @default(uuid())
+  vendaId         String
+  produtoId       String
+  nomeProduto     String   // Snapshot do nome no momento da venda
+  quantidade      Float
+  precoUnitario   Float
+  custoUnitario   Float    @default(0) // Snapshot para lucro
+  desconto        Float    @default(0)
+  tipoDesconto    String   @default("VALOR") // VALOR, PERCENTUAL
+  subtotal        Float
+  criadoEm        DateTime @default(now())
+
+  venda           Venda    @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  produto         Produto  @relation(fields: [produtoId], references: [id])
+
+  @@map("itens_venda")
 }
 
 model SinucaPartida {

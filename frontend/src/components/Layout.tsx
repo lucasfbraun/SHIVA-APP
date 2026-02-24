@@ -11,7 +11,8 @@ import {
   DollarSign,
   Users,
   TrendingUp,
-  Trophy
+  Trophy,
+  ShoppingCart as ShoppingCartIcon
 } from 'lucide-react';
 import { useState } from 'react';
 import { authService } from '@/services/authService';
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Produtos', href: '/produtos', icon: Package },
   { name: 'Comandas', href: '/comandas', icon: FileText },
   { name: 'Clientes', href: '/clientes', icon: Users },
+  { name: 'Vendas', href: '/vendas', icon: ShoppingCartIcon },
   { name: 'Sinuca', href: '/sinuca', icon: Trophy },
   { name: 'Despesas', href: '/despesas', icon: DollarSign },
   { name: 'Relatórios', href: '/relatorios', icon: BarChart3 },

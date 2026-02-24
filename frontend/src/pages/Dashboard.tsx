@@ -135,7 +135,7 @@ export default function Dashboard() {
       </div>
 
       {/* Ações Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Link
           to="/produtos/novo"
           className="card text-center hover:scale-105 transition-transform cursor-pointer"
@@ -152,6 +152,15 @@ export default function Dashboard() {
           <ShoppingCart className="text-purple-primary mx-auto mb-3" size={32} />
           <h3 className="font-semibold text-text-primary">Abrir Comanda</h3>
           <p className="text-sm text-text-secondary mt-1">Iniciar novo atendimento</p>
+        </Link>
+
+        <Link
+          to="/vendas"
+          className="card text-center hover:scale-105 transition-transform cursor-pointer"
+        >
+          <DollarSign className="text-purple-primary mx-auto mb-3" size={32} />
+          <h3 className="font-semibold text-text-primary">Vendas (PDV)</h3>
+          <p className="text-sm text-text-secondary mt-1">Realizar vendas</p>
         </Link>
 
         <Link
