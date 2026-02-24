@@ -84,6 +84,8 @@ model Comanda {
   total           Float    @default(0)
   valorPago       Float    @default(0)
   valorRestante   Float    @default(0)
+  desconto        Float    @default(0)
+  tipoDesconto    String   @default("VALOR") // VALOR, PERCENTUAL
   dataAbertura    DateTime @default(now())
   dataFechamento  DateTime?
   observacao      String?

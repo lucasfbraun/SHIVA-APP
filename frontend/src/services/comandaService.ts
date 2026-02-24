@@ -58,5 +58,11 @@ export const comandaService = {
   async recalcular(id: string) {
     const { data } = await api.post(`/comandas/${id}/recalcular`);
     return data;
+  },
+
+  async atualizarDesconto(id: string, desconto: number, tipoDesconto: 'VALOR' | 'PERCENTUAL') {
+    const { data } = await api.post(`/comandas/${id}/desconto`, { desconto, tipoDesconto });
+    return data;
   }
+
 };

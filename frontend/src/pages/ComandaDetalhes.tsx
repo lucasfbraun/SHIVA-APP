@@ -18,6 +18,9 @@ export default function ComandaDetalhes() {
   const [adicionando, setAdicionando] = useState(false);
   const [itensSelecionados, setItensSelecionados] = useState<string[]>([]);
   const [valorParcial, setValorParcial] = useState('');
+  const [desconto, setDesconto] = useState('0');
+  const [tipoDesconto, setTipoDesconto] = useState<'VALOR' | 'PERCENTUAL'>('VALOR');
+  const [atualizandoDesconto, setAtualizandoDesconto] = useState(false);
 
   useEffect(() => {
     loadComanda();
@@ -29,6 +32,8 @@ export default function ComandaDetalhes() {
       setLoading(true);
       const data = await comandaService.getById(id!);
       setComanda(data);
+      setDesconto(data.desconto?.toString() || '0');
+      setTipoDesconto(data.tipoDesconto || 'VALOR');
     } catch (error) {
       console.error('Erro ao carregar comanda:', error);
       navigate('/comandas');
@@ -114,7 +119,11 @@ export default function ComandaDetalhes() {
     try {
       await comandaService.pagamentoParcial(id!, valor);
       setValorParcial('');
-      loadComanda();
+      await loadComanda();
+      // Aguardar um pouco para garantir a renderização
+      setTimeout(() => {
+        console.log('Pagamento registrado, comanda recarregada');
+      }, 100);
     } catch (error: any) {
       console.error('Erro ao registrar pagamento:', error);
       alert(error.response?.data?.error || 'Erro ao registrar pagamento');
@@ -131,6 +140,25 @@ export default function ComandaDetalhes() {
     } catch (error: any) {
       console.error('Erro ao recalcular:', error);
       alert(error.response?.data?.error || 'Erro ao recalcular valores');
+    }
+  };
+
+  const handleAtualizarDesconto = async () => {
+    const descontoNum = parseFloat(desconto);
+    if (isNaN(descontoNum) || descontoNum < 0) {
+      alert('Digite um valor válido para o desconto');
+      return;
+    }
+
+    try {
+      setAtualizandoDesconto(true);
+      await comandaService.atualizarDesconto(id!, descontoNum, tipoDesconto);
+      loadComanda();
+    } catch (error: any) {
+      console.error('Erro ao atualizar desconto:', error);
+      alert(error.response?.data?.error || 'Erro ao atualizar desconto');
+    } finally {
+      setAtualizandoDesconto(false);
     }
   };
 
@@ -224,7 +252,7 @@ export default function ComandaDetalhes() {
             </button>
           )}
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div>
             <p className="text-text-secondary text-sm">Itens</p>
             <p className="text-2xl font-bold text-text-primary mt-1">
@@ -246,10 +274,31 @@ export default function ComandaDetalhes() {
           <div>
             <p className="text-text-secondary text-sm">Saldo Devedor</p>
             <p className="text-2xl font-bold text-yellow-400 mt-1">
-              R$ {(Math.abs(comanda.valorRestante || 0) < 0.01 ? 0 : comanda.valorRestante).toFixed(2)}
+              R$ {saldoDevedor.toFixed(2)}
             </p>
           </div>
         </div>
+
+        {/* Resumo com Desconto */}
+        {comanda.desconto > 0 && (
+          <div className="bg-background-primary rounded-lg p-4 mb-4 border border-purple-primary/30">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between text-text-primary">
+                <span>Total</span>
+                <span className="font-semibold">R$ {comanda.total.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-yellow-400">
+                <span>Desconto ({comanda.tipoDesconto === 'PERCENTUAL' ? 
+                  ((comanda.desconto / comanda.total) * 100).toFixed(1) + '%' : 'Fixo'})</span>
+                <span className="font-semibold">-R$ {comanda.desconto.toFixed(2)}</span>
+              </div>
+              <div className="border-t border-purple-primary/20 pt-2 flex justify-between text-text-primary font-semibold">
+                <span>Saldo Final</span>
+                <span className="text-purple-highlight">R$ {saldoDevedor.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        )}
         {isAberta && (
           <button
             onClick={() => setModalOpen(true)}
@@ -261,11 +310,68 @@ export default function ComandaDetalhes() {
         )}
       </div>
 
+      {/* Desconto */}
+      {isAberta && (
+        <div className="card">
+          <h2 className="text-lg font-semibold text-text-primary mb-4">Desconto</h2>
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Tipo
+                </label>
+                <select
+                  value={tipoDesconto}
+                  onChange={(e) => setTipoDesconto(e.target.value as 'VALOR' | 'PERCENTUAL')}
+                  className="input w-full"
+                >
+                  <option value="VALOR">Valor (R$)</option>
+                  <option value="PERCENTUAL">Percentual (%)</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Desconto
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max={tipoDesconto === 'PERCENTUAL' ? '100' : comanda.total}
+                  value={desconto}
+                  onChange={(e) => setDesconto(e.target.value)}
+                  placeholder={tipoDesconto === 'VALOR' ? 'R$' : '%'}
+                  className="input w-full"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={handleAtualizarDesconto}
+                  disabled={atualizandoDesconto}
+                  className="btn-primary px-6 disabled:opacity-50"
+                >
+                  {atualizandoDesconto ? 'Atualizando...' : 'Aplicar'}
+                </button>
+              </div>
+            </div>
+            {comanda.desconto > 0 && (
+              <div className="text-sm text-text-secondary">
+                💰 Desconto aplicado: R$ {comanda.desconto.toFixed(2)}
+                {tipoDesconto === 'PERCENTUAL' && ` (${((comanda.desconto / comanda.total) * 100).toFixed(1)}%)`}
+              </div>
+            )}
+            <p className="text-text-secondary text-sm bg-purple-primary/10 p-3 rounded-lg">
+              ℹ️ Se houver desconto, a comanda só poderá ser fechada através de "Adicionar Pagamento (Rachar Conta)"
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Itens */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-text-primary">Itens da Comanda</h2>
-          {isAberta && itensSelecionados.length > 0 && (
+          {isAberta && itensSelecionados.length > 0 && (comanda.desconto || 0) === 0 && (
             <button
               onClick={handlePagarItens}
               className="btn-primary flex items-center space-x-2"
@@ -275,6 +381,17 @@ export default function ComandaDetalhes() {
             </button>
           )}
         </div>
+        
+        {(comanda.desconto || 0) > 0 && isAberta && (
+          <div className="mb-4 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-lg">
+            <p className="text-sm text-yellow-300">
+              ⚠️ Com desconto aplicado, não é possível marcar itens como pagos individualmente.
+            </p>
+            <p className="text-sm text-text-secondary mt-1">
+              Use "Adicionar Pagamento (Rachar Conta)" para registrar os pagamentos.
+            </p>
+          </div>
+        )}
         
         {comanda.itens && comanda.itens.length > 0 ? (
           <div className="space-y-3">
@@ -287,12 +404,18 @@ export default function ComandaDetalhes() {
                     : 'bg-background-primary'
                 }`}
               >
-                {isAberta && !item.pago && (
+                {isAberta && !item.pago && (comanda.desconto || 0) === 0 && (
                   <input
                     type="checkbox"
                     checked={itensSelecionados.includes(item.id)}
                     onChange={() => toggleItemSelecionado(item.id)}
                     className="mr-3 w-5 h-5"
+                  />
+                )}
+                {isAberta && !item.pago && (comanda.desconto || 0) > 0 && (
+                  <div
+                    className="mr-3 w-5 h-5 rounded border-2 border-gray-500/30 bg-gray-500/10 cursor-not-allowed"
+                    title="Marcar itens como pagos está desabilitado quando há desconto. Use Adicionar Pagamento."
                   />
                 )}
                 <div className="flex items-center space-x-4 flex-1">
@@ -388,9 +511,17 @@ export default function ComandaDetalhes() {
           </button>
           <button
             onClick={handleFecharComanda}
-            disabled={!comanda.itens || comanda.itens.length === 0 || saldoDevedor > 0}
+            disabled={
+              !comanda.itens || 
+              comanda.itens.length === 0 || 
+              Math.abs(saldoDevedor) > 0.01
+            }
             className="btn-primary flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={saldoDevedor > 0 ? `Saldo devedor: R$ ${saldoDevedor.toFixed(2)} - Pague antes de fechar!` : 'Fechar comanda e dar baixa no estoque'}
+            title={
+              Math.abs(saldoDevedor) > 0.01
+                ? `Saldo devedor: R$ ${saldoDevedor.toFixed(2)} - Pague antes de fechar!`
+                : 'Fechar comanda e dar baixa no estoque'
+            }
           >
             <CheckCircle size={20} />
             <span>Fechar Comanda</span>

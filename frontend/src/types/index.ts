@@ -58,6 +58,8 @@ export interface Comanda {
   total: number;
   valorPago: number;
   valorRestante: number;
+  desconto: number;
+  tipoDesconto: 'VALOR' | 'PERCENTUAL';
   dataAbertura: string;
   dataFechamento?: string;
   observacao?: string;

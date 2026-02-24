@@ -323,6 +323,14 @@ router.post('/:id/pagar-itens', async (req: Request, res: Response) => {
     if (comanda.status !== 'ABERTA') {
       return res.status(400).json({ error: 'Comanda não está aberta' });
     }
+
+    // Verificar se há desconto aplicado
+    if (comanda.desconto && comanda.desconto > 0) {
+      return res.status(400).json({ 
+        error: 'Não é possível marcar itens como pagos em uma comanda com desconto. Use "Adicionar Pagamento (Rachar Conta)" para pagar.',
+        desconto: comanda.desconto
+      });
+    }
     
     // Calcular valor dos itens a marcar como pagos
     const itensPagar = comanda.itens.filter(item => 
@@ -345,11 +353,13 @@ router.post('/:id/pagar-itens', async (req: Request, res: Response) => {
       
       // Buscar comanda atual e atualizar com valores arredondados
       const comandaAtual = await tx.comanda.findUnique({ where: { id } });
+      const novoValorPago = arredondar((comandaAtual?.valorPago || 0) + valorPagar);
+      const novoValorRestante = arredondar(comandaAtual!.total - (comandaAtual?.desconto || 0) - novoValorPago);
       const comandaAtualizada = await tx.comanda.update({
         where: { id },
         data: {
-          valorPago: arredondar((comandaAtual?.valorPago || 0) + valorPagar),
-          valorRestante: arredondar((comandaAtual?.valorRestante || 0) - valorPagar)
+          valorPago: novoValorPago,
+          valorRestante: Math.abs(novoValorRestante) < 0.01 ? 0 : novoValorRestante
         },
         include: { itens: true }
       });
@@ -396,9 +406,9 @@ router.post('/:id/pagamento-parcial', async (req: Request, res: Response) => {
       });
     }
     
-    // Calcular novos valores com arredondamento
+    // Calcular novos valores com arredondamento (considerando desconto)
     const novoValorPago = arredondar((comanda.valorPago || 0) + valorPagamento);
-    const novoValorRestante = arredondar(comanda.total - novoValorPago);
+    const novoValorRestante = arredondar(comanda.total - (comanda.desconto || 0) - novoValorPago);
     
     // Se o valor restante ficar muito próximo de zero, ajustar para zero
     const valorRestanteFinal = Math.abs(novoValorRestante) < 0.01 ? 0 : novoValorRestante;
@@ -473,8 +483,8 @@ router.post('/:id/recalcular', async (req: Request, res: Response) => {
       .filter(item => item.pago)
       .reduce((sum, item) => sum + item.subtotal, 0));
     
-    // Calcular valor restante
-    let valorRestante = arredondar(total - valorPago);
+    // Calcular valor restante (considerando desconto)
+    let valorRestante = arredondar(total - (comanda.desconto || 0) - valorPago);
     
     // Se o valor restante for muito próximo de zero, ajustar para zero
     if (Math.abs(valorRestante) < 0.01) {
@@ -501,3 +511,73 @@ router.post('/:id/recalcular', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+// POST - Atualizar desconto da comanda
+router.post('/:id/desconto', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { desconto, tipoDesconto } = req.body;
+
+    if (desconto === undefined || tipoDesconto === undefined) {
+      return res.status(400).json({ error: 'Desconto e tipo de desconto são obrigatórios' });
+    }
+
+    if (!['VALOR', 'PERCENTUAL'].includes(tipoDesconto)) {
+      return res.status(400).json({ error: 'Tipo de desconto inválido. Use VALOR ou PERCENTUAL' });
+    }
+
+    const descontoNum = parseFloat(desconto);
+    if (descontoNum < 0) {
+      return res.status(400).json({ error: 'Desconto não pode ser negativo' });
+    }
+
+    const comanda = await prisma.comanda.findUnique({
+      where: { id },
+      include: { itens: true }
+    });
+
+    if (!comanda) {
+      return res.status(404).json({ error: 'Comanda não encontrada' });
+    }
+
+    if (comanda.status !== 'ABERTA') {
+      return res.status(400).json({ error: 'Comanda não está aberta' });
+    }
+
+    // Validar percentual
+    if (tipoDesconto === 'PERCENTUAL' && descontoNum > 100) {
+      return res.status(400).json({ error: 'Percentual não pode ser maior que 100' });
+    }
+
+    // Calcular desconto em valor
+    const descontoValor = tipoDesconto === 'PERCENTUAL'
+      ? arredondar((comanda.total * descontoNum) / 100)
+      : arredondar(descontoNum);
+
+    // Validar se desconto não é maior que o total
+    if (descontoValor > comanda.total + 0.01) {
+      return res.status(400).json({ error: 'Desconto não pode ser maior que o total da comanda' });
+    }
+
+    // Calcular novo saldo devedor (total - desconto - valor pago)
+    const novoValorRestante = arredondar(comanda.total - descontoValor - (comanda.valorPago || 0));
+
+    const comandaAtualizada = await prisma.comanda.update({
+      where: { id },
+      data: {
+        desconto: descontoValor,
+        tipoDesconto,
+        valorRestante: Math.abs(novoValorRestante) < 0.01 ? 0 : novoValorRestante
+      },
+      include: { itens: true }
+    });
+
+    res.json({
+      message: 'Desconto atualizado com sucesso',
+      comanda: comandaAtualizada
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao atualizar desconto' });
+  }
+});
+
