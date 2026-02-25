@@ -1125,7 +1125,7 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-text-primary">
-            Histórico de Entradas ({entradas.length})
+            Historico movimento de estoque ({entradas.length})
           </h2>
           <button
             onClick={exportarParaExcel}
