@@ -834,6 +834,10 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
   
   const totalQuantidade = entradas.reduce((acc: number, e: EntradaEstoque) => acc + e.quantidade, 0);
   const totalValor = entradas.reduce((acc: number, e: EntradaEstoque) => acc + (e.quantidade * e.custoUnitario), 0);
+  const totalValorEntradas = entradas
+    .filter((e: EntradaEstoque) => e.tipoMovimento === 'ENTRADA')
+    .reduce((acc: number, e: EntradaEstoque) => acc + (e.quantidade * e.custoUnitario), 0);
+  const totalValorSaidas = saidas.reduce((acc: number, e: EntradaEstoque) => acc + (e.quantidade * e.custoUnitario), 0);
 
   const limparFiltros = () => {
     setFiltroTipo('TODOS');
@@ -1059,7 +1063,7 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
         <div className="card shadow-lg hover:shadow-xl hover:shadow-purple-500/20 transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-text-secondary text-sm">Total de Entradas</span>
@@ -1100,12 +1104,20 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
           <div className="text-3xl font-bold text-green-500">{entradasOCR.length}</div>
         </div>
 
-        <div className="card shadow-lg hover:shadow-xl hover:shadow-purple-500/20 transition">
+        <div className="card shadow-lg hover:shadow-xl hover:shadow-green-500/20 transition">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-text-secondary text-sm">Valor Total</span>
-            <DollarSign className="text-purple-primary" size={20} />
+            <span className="text-text-secondary text-sm">Valor Total Entradas</span>
+            <DollarSign className="text-green-500" size={20} />
           </div>
-          <div className="text-2xl font-bold text-purple-primary">R$ {totalValor.toFixed(2)}</div>
+          <div className="text-2xl font-bold text-green-500">R$ {totalValorEntradas.toFixed(2)}</div>
+        </div>
+
+        <div className="card shadow-lg hover:shadow-xl hover:shadow-red-500/20 transition">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-secondary text-sm">Valor Total Saidas</span>
+            <DollarSign className="text-red-500" size={20} />
+          </div>
+          <div className="text-2xl font-bold text-red-500">R$ {totalValorSaidas.toFixed(2)}</div>
         </div>
       </div>
 
