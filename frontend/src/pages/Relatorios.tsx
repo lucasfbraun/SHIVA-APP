@@ -866,6 +866,19 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
     setBuscaProduto('');
   };
 
+  const getOrigemMovimento = (entrada: EntradaEstoque) => {
+    if (entrada.tipoEntrada === 'OCR') {
+      return 'OCR Cupom';
+    }
+    if (entrada.comandaId) {
+      return 'Comanda';
+    }
+    if (entrada.tipoMovimento === 'SAIDA' && entrada.observacao?.toLowerCase().includes('pdv')) {
+      return 'PDV';
+    }
+    return 'Movimento de estoque';
+  };
+
   const exportarParaExcel = () => {
     if (entradas.length === 0) {
       alert('Nenhum dado para exportar');
@@ -1157,6 +1170,7 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Comanda</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Movimento</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Tipo</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Origem</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Nº Cupom</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Observação</th>
                 </tr>
@@ -1234,6 +1248,11 @@ function RelatorioEstoqueContent({ entradas, filtroTipo, setFiltroTipo, filtroMo
                           OCR
                         </span>
                       )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs text-text-secondary">
+                        {getOrigemMovimento(entrada)}
+                      </span>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm text-text-secondary">
